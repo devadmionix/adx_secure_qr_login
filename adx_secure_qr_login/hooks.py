@@ -8,29 +8,39 @@ app_license = "mit"
 # Apps
 # ------------------
 
-# required_apps = []
+# QR login depends on ERPNext User/Role/Company semantics and on the stock
+# Frappe permission engine. Declared so it cannot be installed against a bare
+# Frappe site where roles like "Sales User" do not exist.
+required_apps = ["frappe", "erpnext"]
 
 # Each item in the list will be shown as an app in the apps page
-# add_to_apps_screen = [
-# 	{
-# 		"name": "adx_secure_qr_login",
-# 		"logo": "/assets/adx_secure_qr_login/logo.png",
-# 		"title": "Secure QR Login",
-# 		"route": "/adx_secure_qr_login",
-# 		"has_permission": "adx_secure_qr_login.api.permission.has_app_permission"
-# 	}
-# ]
+add_to_apps_screen = [
+	{
+		"name": "adx_secure_qr_login",
+		"logo": "/assets/adx_secure_qr_login/logo.svg",
+		"title": "Secure QR Login",
+		"route": "/desk/secure-qr-login",
+	}
+]
 
 # Includes in <head>
 # ------------------
 
-# include js, css files in header of desk.html
-# app_include_css = "/assets/adx_secure_qr_login/css/adx_secure_qr_login.css"
-# app_include_js = "/assets/adx_secure_qr_login/js/adx_secure_qr_login.js"
+# Desk bundle for the credential / audit views.
+# Phase 2 ships no desk JS yet; the key is reserved so later phases do not have
+# to touch hooks.py again.
+app_include_js = ["adx_secure_qr_login.bundle.js"]
+app_include_css = "/assets/adx_secure_qr_login/css/qr_dashboard.css"
 
 # include js, css files in header of web template
-# web_include_css = "/assets/adx_secure_qr_login/css/adx_secure_qr_login.css"
-# web_include_js = "/assets/adx_secure_qr_login/js/adx_secure_qr_login.js"
+#
+# These fire on every website page, including /login
+# (frappe/website/doctype/website_settings/website_settings.py:231 renders
+# `web_include_js` at templates/base.html:105). They are how the QR login option
+# reaches the login page without editing frappe/www/login.html: the script injects
+# its own UI into the DOM at runtime.
+web_include_css = "/assets/adx_secure_qr_login/css/qr_login.css"
+web_include_js = "/assets/adx_secure_qr_login/js/qr_login_scan.js"
 
 # include custom scss in every website theme (without file extension ".scss")
 # website_theme_scss = "adx_secure_qr_login/public/scss/website"
@@ -132,46 +142,73 @@ app_license = "mit"
 # -----------
 # Permissions evaluated in scripted ways
 
-# permission_query_conditions = {
-# 	"Event": "frappe.desk.doctype.event.event.get_permission_query_conditions",
-# }
-#
-# has_permission = {
-# 	"Event": "frappe.desk.doctype.event.event.has_permission",
-# }
+# `if_owner` is the wrong scoping tool for QR Login Credential: the owner is
+# whoever issued the credential, not the user it authenticates. These hooks
+# scope rows by subject instead. See permissions/credential_conditions.py.
+permission_query_conditions = {
+	"QR Login Credential": "adx_secure_qr_login.permissions.credential_conditions.get_permission_query_conditions",
+	# The audit trail is security evidence. Administrators and QR Admins see all;
+	# QR Managers see only rows for users they may manage; ordinary desk users
+	# see nothing. See permissions/audit_conditions.py.
+	"QR Login Audit": "adx_secure_qr_login.permissions.audit_conditions.get_permission_query_conditions",
+}
+
+has_permission = {
+	"QR Login Credential": "adx_secure_qr_login.permissions.credential_conditions.has_permission",
+	"QR Login Audit": "adx_secure_qr_login.permissions.audit_conditions.has_permission",
+}
 
 # Document Events
 # ---------------
 # Hook on document methods and events
 
-# doc_events = {
-# 	"*": {
-# 		"on_update": "method",
-# 		"on_cancel": "method",
-# 		"on_trash": "method"
-# 	}
-# }
+# Supplies the transient `qr_image_data` attribute that the card print format
+# renders. Deliberately not a field: it must never appear in a form response.
+doc_events = {
+	"QR Login Credential": {
+		"before_print": "adx_secure_qr_login.security.print_hooks.before_print_card",
+	},
+	# Spec 14 USER_DISABLED / SESSION_REVOKED. A disabled account keeps its live
+	# Frappe sessions otherwise, which on a QR login is the whole point of
+	# disabling it. `before_save` snapshots the stored flag so `on_update` can see
+	# the transition -- User is saved by many unrelated routes. (There is no
+	# `before_update` hook in Frappe: run_before_save_methods only runs
+	# before_validate / validate / before_save / before_submit.)
+	"User": {
+		"before_save": (
+			"adx_secure_qr_login.security.session_events.capture_previous_state"
+		),
+		"on_update": "adx_secure_qr_login.security.session_events.record_user_disabled",
+	},
+}
 
 # Scheduled Tasks
 # ---------------
 
-# scheduler_events = {
-# 	"all": [
-# 		"adx_secure_qr_login.tasks.all"
-# 	],
-# 	"daily": [
-# 		"adx_secure_qr_login.tasks.daily"
-# 	],
-# 	"hourly": [
-# 		"adx_secure_qr_login.tasks.hourly"
-# 	],
-# 	"weekly": [
-# 		"adx_secure_qr_login.tasks.weekly"
-# 	],
-# 	"monthly": [
-# 		"adx_secure_qr_login.tasks.monthly"
-# 	],
-# }
+# The weekly report runs Monday 08:00 and summarises the *previous*
+# Monday-Sunday, so it never races the week it is reporting on. The window is
+# derived from the current date inside `previous_week()`, so the cron entry only
+# decides when the job fires.
+#
+# `refresh_expiry_status` keeps list views and dashboard counts honest. It is NOT
+# a security control: validation.py recomputes expiry on every authentication
+# attempt, so a lapsed credential is rejected even if this job has not run.
+scheduler_events = {
+	"cron": {
+		"0 8 * * 1": [
+			"adx_secure_qr_login.reports.weekly_security_report.send_weekly_report",
+		],
+		"7 */2 * * *": [
+			"adx_secure_qr_login.tasks.refresh_expiry_status",
+		],
+	},
+	"hourly": [
+		"adx_secure_qr_login.tasks.refresh_expiry_status",
+	],
+	"daily": [
+		"adx_secure_qr_login.tasks.purge_expired_audit",
+	],
+}
 
 # Testing
 # -------

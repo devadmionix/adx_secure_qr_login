@@ -1,0 +1,255 @@
+{
+ "actions": [],
+ "allow_import": 1,
+ "creation": "2026-10-05 12:00:00.000000",
+ "doctype": "DocType",
+ "editable_grid": 0,
+ "engine": "InnoDB",
+ "field_order": [
+  "section_break_enabled",
+  "qr_login_enabled",
+  "show_login_option",
+  "allow_self_download",
+  "manager_company_scope_enabled",
+  "audit_logging_enabled",
+  "require_https",
+  "section_break_validity",
+  "default_validity_days",
+  "max_validity_days",
+  "max_active_credentials_per_user",
+  "revoke_prior_on_regenerate",
+  "column_break_validity",
+  "notify_user_on_use",
+  "section_break_session",
+  "destroy_prior_session",
+  "idle_timeout_minutes",
+  "section_break_rate_limit",
+  "rate_limit_attempts",
+  "rate_limit_window_seconds",
+  "max_failed_attempts_per_credential",
+  "column_break_rate_limit",
+  "require_2fa_on_qr_login",
+  "section_break_reporting",
+  "weekly_report_enabled",
+  "weekly_report_day",
+  "weekly_report_timezone",
+  "weekly_report_recipient_role",
+  "weekly_report_recipients",
+  "column_break_reporting",
+  "audit_retention_days",
+  "send_report_now"
+ ],
+ "fields": [
+  {
+   "fieldname": "section_break_enabled",
+   "fieldtype": "Section Break",
+   "label": "Availability"
+  },
+  {
+   "default": "1",
+   "fieldname": "qr_login_enabled",
+   "fieldtype": "Check",
+   "label": "Enable QR Login"
+  },
+  {
+   "default": "1",
+   "fieldname": "show_login_option",
+   "fieldtype": "Check",
+   "label": "Show Login Page Option"
+  },
+  {
+   "default": "1",
+   "description": "Spec 6.2 'Allow own QR download'. When off, a user may still sign in with their own QR but cannot re-download the image.",
+   "fieldname": "allow_self_download",
+   "fieldtype": "Check",
+   "label": "Allow Users To Download Own QR"
+  },
+  {
+   "default": "1",
+   "description": "Spec 11. When on, a QR Manager may only manage credentials for users inside the companies the Manager can access. Uses the existing User Permission engine.",
+   "fieldname": "manager_company_scope_enabled",
+   "fieldtype": "Check",
+   "label": "Restrict QR Manager By Company"
+  },
+  {
+   "default": "1",
+   "description": "Spec 6.2. Turning this off is itself recorded as a Security Setting Changed event before it takes effect.",
+   "fieldname": "audit_logging_enabled",
+   "fieldtype": "Check",
+   "label": "Audit Logging"
+  },
+  {
+   "default": "1",
+   "description": "Spec 15. QR login is refused over plain HTTP so the credential never crosses the network in the clear. Disable only for local development.",
+   "fieldname": "require_https",
+   "fieldtype": "Check",
+   "label": "Require HTTPS"
+  },
+  {
+   "fieldname": "section_break_validity",
+   "fieldtype": "Section Break",
+   "label": "Credential Validity"
+  },
+  {
+   "default": "30",
+   "fieldname": "default_validity_days",
+   "fieldtype": "Int",
+   "label": "Default Validity (Days)"
+  },
+  {
+   "default": "90",
+   "fieldname": "max_validity_days",
+   "fieldtype": "Int",
+   "label": "Maximum Validity (Days)"
+  },
+  {
+   "default": "3",
+   "fieldname": "max_active_credentials_per_user",
+   "fieldtype": "Int",
+   "label": "Max Active Credentials Per User"
+  },
+  {
+   "default": "1",
+   "fieldname": "revoke_prior_on_regenerate",
+   "fieldtype": "Check",
+   "label": "Revoke Prior On Regenerate"
+  },
+  {
+   "fieldname": "column_break_validity",
+   "fieldtype": "Column Break"
+  },
+  {
+   "default": "0",
+   "fieldname": "notify_user_on_use",
+   "fieldtype": "Check",
+   "label": "Notify User On Each Use"
+  },
+  {
+   "fieldname": "section_break_session",
+   "fieldtype": "Section Break",
+   "label": "Shared Terminal Safety"
+  },
+  {
+   "default": "1",
+   "description": "On a shared terminal, terminates any existing authenticated session before issuing the new one.",
+   "fieldname": "destroy_prior_session",
+   "fieldtype": "Check",
+   "label": "Destroy Prior Session On QR Login"
+  },
+  {
+   "default": "0",
+   "description": "0 disables the client-side idle warning.",
+   "fieldname": "idle_timeout_minutes",
+   "fieldtype": "Int",
+   "label": "Idle Timeout (Minutes)"
+  },
+  {
+   "fieldname": "section_break_rate_limit",
+   "fieldtype": "Section Break",
+   "label": "Rate Limiting"
+  },
+  {
+   "default": "10",
+   "fieldname": "rate_limit_attempts",
+   "fieldtype": "Int",
+   "label": "Attempts Per Window"
+  },
+  {
+   "default": "300",
+   "fieldname": "rate_limit_window_seconds",
+   "fieldtype": "Int",
+   "label": "Window (Seconds)"
+  },
+  {
+   "default": "5",
+   "fieldname": "max_failed_attempts_per_credential",
+   "fieldtype": "Int",
+   "label": "Max Failures Per Credential"
+  },
+  {
+   "fieldname": "column_break_rate_limit",
+   "fieldtype": "Column Break"
+  },
+  {
+   "default": "1",
+   "description": "When enabled, a user with TOTP enabled must still complete 2FA after scanning. When disabled, a QR scan acts as a substitute for TOTP.",
+   "fieldname": "require_2fa_on_qr_login",
+   "fieldtype": "Check",
+   "label": "Honour Two Factor Auth"
+  },
+  {
+   "fieldname": "section_break_reporting",
+   "fieldtype": "Section Break",
+   "label": "Reporting"
+  },
+  {
+   "default": "1",
+   "fieldname": "weekly_report_enabled",
+   "fieldtype": "Check",
+   "label": "Weekly Report Enabled"
+  },
+  {
+   "default": "Monday",
+   "fieldname": "weekly_report_day",
+   "fieldtype": "Select",
+   "label": "Weekly Report Day",
+   "options": "Monday\nTuesday\nWednesday\nThursday\nFriday\nSaturday\nSunday"
+  },
+  {
+   "default": "Asia/Kolkata",
+   "description": "Timezone the weekly report's 08:00 send time is interpreted in (spec 16).",
+   "fieldname": "weekly_report_timezone",
+   "fieldtype": "Select",
+   "label": "Weekly Report Timezone",
+   "options": "Asia/Kolkata\nUTC\nAsia/Dubai\nAsia/Singapore\nEurope/London\nEurope/Berlin\nAmerica/New_York\nAmerica/Chicago\nAmerica/Los_Angeles\nAustralia/Sydney"
+  },
+  {
+   "default": "QR Admin",
+   "fieldname": "weekly_report_recipient_role",
+   "fieldtype": "Link",
+   "label": "Recipient Role",
+   "options": "Role"
+  },
+  {
+   "description": "Comma separated email addresses, in addition to the recipient role.",
+   "fieldname": "weekly_report_recipients",
+   "fieldtype": "Small Text",
+   "label": "Additional Recipients"
+  },
+  {
+   "fieldname": "column_break_reporting",
+   "fieldtype": "Column Break"
+  },
+  {
+   "default": "365",
+   "fieldname": "audit_retention_days",
+   "fieldtype": "Int",
+   "label": "Audit Retention (Days)"
+  },
+  {
+   "depends_on": "eval:doc.weekly_report_enabled",
+   "fieldname": "send_report_now",
+   "fieldtype": "Button",
+   "label": "Send Weekly Report Now"
+  }
+ ],
+ "index_web_pages_for_search": 1,
+ "issingle": 1,
+ "links": [],
+ "modified": "2026-10-05 12:00:00.000000",
+ "modified_by": "Administrator",
+ "module": "Secure QR Login",
+ "name": "QR Security Settings",
+ "owner": "Administrator",
+ "permissions": [
+  {
+   "read": 1,
+   "report": 1,
+   "role": "QR Admin",
+   "write": 1
+  }
+ ],
+ "sort_field": "creation",
+ "sort_order": "DESC",
+ "states": []
+}

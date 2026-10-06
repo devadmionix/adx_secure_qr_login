@@ -1,0 +1,95 @@
+{
+ "actions": [],
+ "app": "adx_secure_qr_login",
+ "charts": [],
+ "content": "[{\"id\":\"qrHeadManage\",\"type\":\"header\",\"data\":{\"text\":\"<span class=\\\"h4\\\"><b>Credentials</b></span>\",\"col\":12}},{\"id\":\"qrScCred0\",\"type\":\"shortcut\",\"data\":{\"shortcut_name\":\"QR Login Credential\",\"col\":4}},{\"id\":\"qrScAudit0\",\"type\":\"shortcut\",\"data\":{\"shortcut_name\":\"QR Login Audit\",\"col\":4}},{\"id\":\"qrScSet00\",\"type\":\"shortcut\",\"data\":{\"shortcut_name\":\"QR Security Settings\",\"col\":4}}]",
+ "creation": "2026-10-05 10:50:00.000000",
+ "custom_blocks": [],
+ "docstatus": 0,
+ "doctype": "Workspace",
+ "for_user": "",
+ "hide_custom": 0,
+ "hide_sequentially": 0,
+ "icon": "lock",
+ "idx": 0,
+ "indicator_color": "blue",
+ "is_hidden": 0,
+ "label": "Secure QR Login",
+ "link_type": "DocType",
+ "links": [
+  {
+   "hidden": 0,
+   "is_query_report": 0,
+   "label": "Manage",
+   "link_count": 3,
+   "link_type": "DocType",
+   "onboard": 0,
+   "type": "Card Break"
+  },
+  {
+   "hidden": 0,
+   "is_query_report": 0,
+   "label": "QR Login Credential",
+   "link_count": 0,
+   "link_to": "QR Login Credential",
+   "link_type": "DocType",
+   "onboard": 0,
+   "type": "Link"
+  },
+  {
+   "hidden": 0,
+   "is_query_report": 0,
+   "label": "QR Login Audit",
+   "link_count": 0,
+   "link_to": "QR Login Audit",
+   "link_type": "DocType",
+   "onboard": 0,
+   "type": "Link"
+  },
+  {
+   "hidden": 0,
+   "is_query_report": 0,
+   "label": "QR Security Settings",
+   "link_count": 0,
+   "link_to": "QR Security Settings",
+   "link_type": "DocType",
+   "onboard": 0,
+   "type": "Link"
+  }
+ ],
+ "modified": "2026-10-05 13:00:00.000000",
+ "modified_by": "Administrator",
+ "module": "Secure QR Login",
+ "name": "Secure QR Login",
+ "number_cards": [],
+ "owner": "Administrator",
+ "parent_page": "",
+ "public": 1,
+ "quick_lists": [],
+ "roles": [],
+ "sequence_id": 1.0,
+ "shortcuts": [
+  {
+   "color": "Blue",
+   "doc_view": "List",
+   "label": "QR Login Credential",
+   "link_to": "QR Login Credential",
+   "type": "DocType"
+  },
+  {
+   "color": "Green",
+   "doc_view": "List",
+   "label": "QR Login Audit",
+   "link_to": "QR Login Audit",
+   "type": "DocType"
+  },
+  {
+   "color": "Grey",
+   "label": "QR Security Settings",
+   "link_to": "QR Security Settings",
+   "type": "DocType"
+  }
+ ],
+ "title": "Secure QR Login",
+ "type": "Workspace"
+}

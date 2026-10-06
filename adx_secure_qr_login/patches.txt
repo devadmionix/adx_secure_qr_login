@@ -4,3 +4,7 @@
 
 [post_model_sync]
 # Patches added in this section will be executed after doctypes are migrated
+adx_secure_qr_login.patches.v0_0_1.bootstrap_qr_roles_and_settings
+adx_secure_qr_login.patches.v0_0_2.fix_desk_user_permission
+adx_secure_qr_login.patches.v0_0_3.install_security_dashboard
+adx_secure_qr_login.patches.v0_0_4.backfill_security_settings_v2

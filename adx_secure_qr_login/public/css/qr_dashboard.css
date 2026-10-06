@@ -1,0 +1,71 @@
+/* Security dashboard cards. Scoped under .qr-stat-* to avoid core collisions. */
+
+.qr-stat-card {
+	background: #fff;
+	border: 1px solid #ededed;
+	border-left: 3px solid #7c7c7c;
+	border-radius: 8px;
+	padding: 14px 16px;
+}
+
+.qr-stat-card[data-tone="green"] {
+	border-left-color: #12b76a;
+}
+.qr-stat-card[data-tone="orange"] {
+	border-left-color: #f79009;
+}
+.qr-stat-card[data-tone="red"] {
+	border-left-color: #f04438;
+}
+.qr-stat-card[data-tone="blue"] {
+	border-left-color: #2e90fa;
+}
+
+.qr-stat-value {
+	color: #171717;
+	font-size: 26px;
+	font-weight: 600;
+	line-height: 1.2;
+}
+
+.qr-stat-label {
+	color: #7c7c7c;
+	font-size: 12px;
+	margin-top: 2px;
+}
+
+.adx-dash-loading {
+	padding: 24px;
+	text-align: center;
+}
+
+/* Credential form: the QR preview and its actions. */
+.qr-credential-actions {
+	border-top: 1px solid #ededed;
+	margin-top: 12px;
+	padding-top: 12px;
+}
+
+.qr-preview {
+	text-align: center;
+}
+
+.qr-preview img,
+.qr-preview .qr-preview-svg {
+	border: 1px solid #ededed;
+	border-radius: 8px;
+	max-width: 260px;
+	padding: 10px;
+	width: 100%;
+}
+
+.qr-once-notice {
+	background: #fffaeb;
+	border: 1px solid #fedf89;
+	border-radius: 6px;
+	color: #b54708;
+	font-size: 12px;
+	margin-top: 10px;
+	padding: 8px 10px;
+	text-align: left;
+}

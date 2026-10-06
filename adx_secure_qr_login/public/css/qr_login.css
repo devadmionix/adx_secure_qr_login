@@ -1,0 +1,108 @@
+/* Secure QR Login -- login page styles.
+ *
+ * Scoped entirely under .adx-qr-* so nothing here can collide with core login
+ * styles. The panel is inserted adjacent to the existing form and hidden with
+ * [hidden]; it does not restructure login.html.
+ */
+
+.adx-qr-panel {
+	border-top: 1px solid #ededed;
+	margin-top: 16px;
+	padding-top: 16px;
+}
+
+.adx-qr-reader {
+	min-height: 220px;
+	width: 100%;
+}
+
+.adx-qr-reader video {
+	border-radius: 8px;
+	max-width: 100%;
+}
+
+/* html5-qrcode renders its own status line; keep it inside the card. */
+.adx-qr-reader__dashboard {
+	display: flex !important;
+	flex-direction: column;
+	align-items: center;
+}
+
+.adx-qr-status {
+	font-size: 13px;
+	margin: 12px 0 0;
+	min-height: 18px;
+	text-align: center;
+}
+
+.adx-qr-status.is-error {
+	color: #b42318;
+}
+
+.adx-qr-status.is-working {
+	color: #7c7c7c;
+}
+
+.adx-qr-otp {
+	display: flex;
+	gap: 8px;
+	justify-content: center;
+	margin-top: 12px;
+}
+
+.adx-qr-otp input {
+	font-size: 18px;
+	letter-spacing: 4px;
+	max-width: 160px;
+	text-align: center;
+}
+
+.adx-qr-fallback {
+	margin-top: 14px;
+}
+
+.adx-qr-fallback > summary {
+	color: #7c7c7c;
+	cursor: pointer;
+	font-size: 12px;
+	list-style: none;
+}
+
+.adx-qr-fallback > summary::-webkit-details-marker {
+	display: none;
+}
+
+.adx-qr-fallback > summary::before {
+	content: "\25B8\00a0";
+}
+
+.adx-qr-fallback[open] > summary::before {
+	content: "\25BE\00a0";
+}
+
+.adx-qr-fallback input {
+	font-family: monospace;
+	font-size: 12px;
+	width: 100%;
+}
+
+.adx-qr-actions {
+	display: flex;
+	gap: 8px;
+	margin-top: 14px;
+}
+
+.adx-qr-actions .btn {
+	flex: 1;
+}
+
+/* Camera access needs a secure context; when it is unavailable the scanner
+ * falls back to manual entry and says so rather than failing silently. */
+.adx-qr-unsupported {
+	background: #f8f8f8;
+	border-radius: 8px;
+	color: #7c7c7c;
+	font-size: 13px;
+	padding: 16px;
+	text-align: center;
+}
