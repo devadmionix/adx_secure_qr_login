@@ -73,8 +73,21 @@ def attachment_filters(credential: str) -> dict:
 
 
 def find_qr_file(credential: str) -> str | None:
-	"""Return the File docname holding this credential's QR image, if any."""
-	return frappe.db.get_value("File", attachment_filters(credential), "name")
+	"""Return the File docname holding this credential's QR image.
+
+	PNG only. Both the .png and .svg artifacts share the attachment-field
+	key, so an extension filter is applied to keep PNG-only callers safe.
+	"""
+	f = attachment_filters(credential)
+	f["file_name"] = ("like", "%.png")
+	return frappe.db.get_value("File", f, "name")
+
+
+def find_qr_svg_file(credential: str) -> str | None:
+	"""The stored SVG rendering of this credential's QR, if any."""
+	f = attachment_filters(credential)
+	f["file_name"] = ("like", "%.svg")
+	return frappe.db.get_value("File", f, "name")
 
 
 def qr_file_exists(credential: str) -> bool:
@@ -122,6 +135,28 @@ def save_qr_file(payload: str, credential: str, filename_stem: str) -> str | Non
 	)
 	file_doc.flags.ignore_permissions = True
 	file_doc.save(ignore_permissions=True)
+
+	# Also store the SVG twin so admins can download a crisp version from
+	# the credential card. It carries the same QR content as the PNG --
+	# never more, never less sensitive.
+	try:
+		svg_bytes = render_svg(payload).encode("utf-8")
+		svg_file = frappe.get_doc(
+			{
+				"doctype": "File",
+				"file_name": f"{filename_stem}-qr.svg",
+				"content": svg_bytes,
+				"attached_to_doctype": "QR Login Credential",
+				"attached_to_name": credential,
+				"attached_to_field": ATTACHED_FIELD,
+				"is_private": 1,
+			}
+		)
+		svg_file.flags.ignore_permissions = True
+		svg_file.save(ignore_permissions=True)
+	except Exception:
+		frappe.log_error(title="QR SVG render failed", message=frappe.get_traceback())
+
 	return file_doc.name
 
 

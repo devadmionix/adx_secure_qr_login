@@ -155,7 +155,8 @@
    "export": 1,
    "read": 1,
    "report": 1,
-   "role": "QR Admin"
+   "role": "QR Admin",
+   "delete": 1
   },
   {
    "export": 1,

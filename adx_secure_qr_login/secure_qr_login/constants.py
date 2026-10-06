@@ -86,10 +86,29 @@ REASON_EXPIRED_CREDENTIAL = "EXPIRED_CREDENTIAL"
 REASON_REVOKED_CREDENTIAL = "REVOKED_CREDENTIAL"
 REASON_SUPERSEDED_CREDENTIAL = "SUPERSEDED_CREDENTIAL"
 REASON_INACTIVE_USER = "INACTIVE_USER"
+REASON_COMPANY_NOT_ASSIGNED = "COMPANY_NOT_ASSIGNED"
 REASON_RATE_LIMITED = "RATE_LIMITED"
 REASON_UNAUTHORIZED = "UNAUTHORIZED"
 REASON_SECURITY_VALIDATION_FAILED = "SECURITY_VALIDATION_FAILED"
 REASON_OK = "OK"
+
+# Audit events that represent a rejected QR *login attempt*.
+#
+# Everything else (QR Generated/Downloaded/Regenerated/Revoked, QR Expired
+# sweep, Session Revoked, Security Setting Changed, Unauthorized QR
+# Management, User Disabled transitions) is lifecycle/administration, not a
+# login attempt, and must not inflate failure counts. Shared by the dashboard
+# (api/qr_stats.py) and the weekly report (security/weekly_report.py) so the
+# two can never disagree on what a "failed login" is.
+FAILED_LOGIN_EVENTS = (
+	EVENT_LOGIN_SUCCESS,  # defensive: a stored success=0 login row, if any
+	EVENT_INVALID_CREDENTIAL,
+	EVENT_EXPIRED_CREDENTIAL,
+	EVENT_REVOKED_CREDENTIAL,
+	EVENT_INACTIVE_USER,
+	EVENT_RATE_LIMITED,
+	EVENT_SECURITY_VALIDATION_FAILED,
+)
 
 # Internal reason code -> user-facing message.
 #
@@ -103,6 +122,7 @@ REASON_MESSAGES = {
 	REASON_REVOKED_CREDENTIAL: frappe._("This QR credential has been revoked. Please contact the QR administrator."),
 	REASON_SUPERSEDED_CREDENTIAL: frappe._("This QR credential has been replaced. Please contact the QR administrator."),
 	REASON_INACTIVE_USER: frappe._("This account is not active. Please contact your administrator."),
+	REASON_COMPANY_NOT_ASSIGNED: frappe._("QR login is not configured for a company. Please contact your administrator."),
 	REASON_RATE_LIMITED: frappe._("Too many attempts. Please wait and try again."),
 	REASON_UNAUTHORIZED: frappe._("You are not permitted to perform this action."),
 	REASON_SECURITY_VALIDATION_FAILED: frappe._("This QR credential could not be validated."),

@@ -23,6 +23,7 @@ from adx_secure_qr_login.secure_qr_login.constants import (
 	CREDENTIAL_STATUS_REVOKED,
 	EVENT_LOGIN_SUCCESS,
 	EVENT_RATE_LIMITED,
+	FAILED_LOGIN_EVENTS,
 )
 
 
@@ -124,24 +125,34 @@ def authentication_counts(
 	success = 0
 	failed = 0
 	if scoped:
-		# Every non-login event in a Manager's scope is an event they cannot
-		# attribute to a success, and all of them with success=0 are rejections.
-		# Exact per-reason counts live in `security_event_counts`.
+		# Only genuine login outcomes count. Management events (generated,
+		# downloaded, revoked, ...) are activity, not authentication, and
+		# must not inflate the failure figure.
 		success = sum(
 			count for event, count in by_event.items() if event == EVENT_LOGIN_SUCCESS
 		)
 		failed = sum(
-			count for event, count in by_event.items() if event != EVENT_LOGIN_SUCCESS
+			count
+			for event, count in by_event.items()
+			if event in FAILED_LOGIN_EVENTS and event != EVENT_LOGIN_SUCCESS
 		)
 	else:
+		conditions = ["occurred_on BETWEEN %s AND %s"]
+		args: list = [fr_fr, to_fr]
+		if user:
+			conditions.append("`user` = %s")
+			args.append(user)
+		if company:
+			conditions.append("`company` = %s")
+			args.append(company)
 		rows = frappe.db.sql(
-			"""
+			f"""
 			SELECT event, success, COUNT(*) AS count
 			FROM `tabQR Login Audit`
-			WHERE occurred_on BETWEEN %s AND %s
+			WHERE {" AND ".join(conditions)}
 			GROUP BY event, success
 			""",
-			(fr_fr, to_fr),
+			tuple(args),
 			as_dict=True,
 		)
 		for r in rows:
@@ -150,8 +161,7 @@ def authentication_counts(
 					success += r["count"]
 				else:
 					failed += r["count"]
-			else:
-				# Every non-login event with success=0 is a rejected attempt.
+			elif r["event"] in FAILED_LOGIN_EVENTS and not r["success"]:
 				failed += r["count"]
 
 	rate_limited = by_event.get(EVENT_RATE_LIMITED, 0)
@@ -281,6 +291,57 @@ def recent_credential_changes(limit: int = 10) -> list[dict]:
 	)
 
 
+def daily_login_series(
+	frm: str | None = None,
+	to: str | None = None,
+	user: str | None = None,
+	company: str | None = None,
+) -> list[dict]:
+	"""Successful vs failed QR logins per day, for the activity chart.
+
+	One aggregated GROUP BY query -- never loads rows. A QR Manager sees only
+	their scoped users (same `_visible_user_clause` as credential counts), so
+	the chart can never leak another company's activity.
+	"""
+	fr_fr, to_fr = _bounds(frm, to)
+	where, scope_args = _visible_user_clause("user")
+
+	args: list = [EVENT_LOGIN_SUCCESS]
+	placeholders = ", ".join(["%s"] * len(FAILED_LOGIN_EVENTS))
+	args.extend(FAILED_LOGIN_EVENTS)
+	args.extend([fr_fr, to_fr])
+
+	if user:
+		where += " AND `user` = %s"
+		args.append(user)
+	if company:
+		where += " AND `company` = %s"
+		args.append(company)
+
+	rows = frappe.db.sql(
+		f"""
+		SELECT DATE(occurred_on) AS day,
+			SUM(CASE WHEN event = %s AND success = 1 THEN 1 ELSE 0 END) AS successful,
+			SUM(CASE WHEN success = 0 AND event IN ({placeholders}) THEN 1 ELSE 0 END) AS failed
+		FROM `tabQR Login Audit`
+		WHERE occurred_on BETWEEN %s AND %s{where}
+		GROUP BY DATE(occurred_on)
+		ORDER BY day
+		""",
+		tuple(args),
+		as_dict=True,
+	)
+	return [
+		{
+			"day": str(r["day"]),
+			"successful": int(r["successful"] or 0),
+			"failed": int(r["failed"] or 0),
+		}
+		for r in rows
+	]
+
+
+@frappe.whitelist()
 def dashboard_data(
 	frm: str | None = None,
 	to: str | None = None,
@@ -306,6 +367,7 @@ def dashboard_data(
 		"credentials": credential_counts(),
 		"authentication": authentication_counts(frm, to, user, company),
 		"security": security_event_counts(frm, to, user, company),
+		"daily": daily_login_series(frm, to, user, company),
 		"recent_failures": recent_failures(),
 		"recent_changes": recent_credential_changes(),
 		"generated_on": frappe.utils.now(),

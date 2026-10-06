@@ -53,7 +53,9 @@ web_include_js = "/assets/adx_secure_qr_login/js/qr_login_scan.js"
 # page_js = {"page" : "public/js/file.js"}
 
 # include js in doctype views
-# doctype_js = {"doctype" : "public/js/doctype.js"}
+doctype_js = {
+	"QR Login Credential": "public/js/qr_login_credential.js",
+}
 # doctype_list_js = {"doctype" : "public/js/doctype_list.js"}
 # doctype_tree_js = {"doctype" : "public/js/doctype_tree.js"}
 # doctype_calendar_js = {"doctype" : "public/js/doctype_calendar.js"}
@@ -151,11 +153,14 @@ permission_query_conditions = {
 	# QR Managers see only rows for users they may manage; ordinary desk users
 	# see nothing. See permissions/audit_conditions.py.
 	"QR Login Audit": "adx_secure_qr_login.permissions.audit_conditions.get_permission_query_conditions",
+	# Weekly aggregates are admin-only. See permissions/weekly_report_conditions.py.
+	"Weekly Security Report": "adx_secure_qr_login.permissions.weekly_report_conditions.get_permission_query_conditions",
 }
 
 has_permission = {
 	"QR Login Credential": "adx_secure_qr_login.permissions.credential_conditions.has_permission",
 	"QR Login Audit": "adx_secure_qr_login.permissions.audit_conditions.has_permission",
+	"Weekly Security Report": "adx_secure_qr_login.permissions.weekly_report_conditions.has_permission",
 }
 
 # Document Events
@@ -179,6 +184,9 @@ doc_events = {
 			"adx_secure_qr_login.security.session_events.capture_previous_state"
 		),
 		"on_update": "adx_secure_qr_login.security.session_events.record_user_disabled",
+		# Auto-issue a QR credential + welcome email for newly created users
+		# (opt-in setting, System Users with a company only).
+		"after_insert": "adx_secure_qr_login.api.qr_manage.issue_credential_for_new_user",
 	},
 }
 
@@ -195,6 +203,11 @@ doc_events = {
 # attempt, so a lapsed credential is rejected even if this job has not run.
 scheduler_events = {
 	"cron": {
+		# Persistent weekly report (Feature 8): Monday 00:05 stores the previous
+		# Monday-Sunday as a `Weekly Security Report` record. Duplicate-safe.
+		"5 0 * * 1": [
+			"adx_secure_qr_login.security.weekly_report.generate_for_previous_week",
+		],
 		"0 8 * * 1": [
 			"adx_secure_qr_login.reports.weekly_security_report.send_weekly_report",
 		],
@@ -209,6 +222,19 @@ scheduler_events = {
 		"adx_secure_qr_login.tasks.purge_expired_audit",
 	],
 }
+
+# Fixtures
+# --------
+# Ships the `Company` custom field on User (multi-company QR login gate).
+# A Custom Field never touches Frappe/ERPNext core files; it syncs into any
+# site on migrate. Filtered to this app's field so unrelated site
+# customizations are never exported.
+fixtures = [
+	{
+		"dt": "Custom Field",
+		"filters": [["name", "=", "User-company"]],
+	}
+]
 
 # Testing
 # -------

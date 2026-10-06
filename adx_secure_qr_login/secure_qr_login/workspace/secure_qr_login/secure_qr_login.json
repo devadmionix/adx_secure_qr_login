@@ -1,15 +1,13 @@
 {
- "actions": [],
  "app": "adx_secure_qr_login",
  "charts": [],
- "content": "[{\"id\":\"qrHeadManage\",\"type\":\"header\",\"data\":{\"text\":\"<span class=\\\"h4\\\"><b>Credentials</b></span>\",\"col\":12}},{\"id\":\"qrScCred0\",\"type\":\"shortcut\",\"data\":{\"shortcut_name\":\"QR Login Credential\",\"col\":4}},{\"id\":\"qrScAudit0\",\"type\":\"shortcut\",\"data\":{\"shortcut_name\":\"QR Login Audit\",\"col\":4}},{\"id\":\"qrScSet00\",\"type\":\"shortcut\",\"data\":{\"shortcut_name\":\"QR Security Settings\",\"col\":4}}]",
- "creation": "2026-10-05 10:50:00.000000",
+ "content": "[\n {\n  \"data\": {\n   \"col\": 12,\n   \"text\": \"<span class=\\\"h4\\\"><b>Credentials</b></span>\"\n  },\n  \"id\": \"qrHeadManage\",\n  \"type\": \"header\"\n },\n {\n  \"data\": {\n   \"col\": 4,\n   \"shortcut_name\": \"QR Login Credential\"\n  },\n  \"id\": \"qrScCred0\",\n  \"type\": \"shortcut\"\n },\n {\n  \"data\": {\n   \"col\": 4,\n   \"shortcut_name\": \"QR Login Audit\"\n  },\n  \"id\": \"qrScAudit0\",\n  \"type\": \"shortcut\"\n },\n {\n  \"data\": {\n   \"col\": 4,\n   \"shortcut_name\": \"QR Security Settings\"\n  },\n  \"id\": \"qrScSet00\",\n  \"type\": \"shortcut\"\n },\n {\n  \"data\": {\n   \"chart_name\": \"adx_qr_security\",\n   \"col\": 12\n  },\n  \"id\": \"qrDashBlock1\",\n  \"type\": \"chart\"\n },\n {\n  \"data\": {\n   \"col\": 12,\n   \"text\": \"<span class=\\\"h4\\\"><b>Reports</b></span>\"\n  },\n  \"id\": \"qrHeadRpt\",\n  \"type\": \"header\"\n },\n {\n  \"data\": {\n   \"col\": 4,\n   \"shortcut_name\": \"Weekly Security Report\"\n  },\n  \"id\": \"qrScRpt0\",\n  \"type\": \"shortcut\"\n }\n]",
+ "creation": "2026-10-05 10:50:00",
  "custom_blocks": [],
  "docstatus": 0,
  "doctype": "Workspace",
  "for_user": "",
  "hide_custom": 0,
- "hide_sequentially": 0,
  "icon": "lock",
  "idx": 0,
  "indicator_color": "blue",
@@ -55,9 +53,19 @@
    "link_type": "DocType",
    "onboard": 0,
    "type": "Link"
+  },
+  {
+   "hidden": 0,
+   "is_query_report": 0,
+   "label": "Weekly Security Report",
+   "link_count": 0,
+   "link_to": "Weekly Security Report",
+   "link_type": "DocType",
+   "onboard": 0,
+   "type": "Link"
   }
  ],
- "modified": "2026-10-05 13:00:00.000000",
+ "modified": "2026-10-06 11:15:58.642357",
  "modified_by": "Administrator",
  "module": "Secure QR Login",
  "name": "Secure QR Login",
@@ -87,6 +95,13 @@
    "color": "Grey",
    "label": "QR Security Settings",
    "link_to": "QR Security Settings",
+   "type": "DocType"
+  },
+  {
+   "color": "Orange",
+   "doc_view": "List",
+   "label": "Weekly Security Report",
+   "link_to": "Weekly Security Report",
    "type": "DocType"
   }
  ],

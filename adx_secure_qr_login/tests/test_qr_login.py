@@ -15,6 +15,8 @@ with a real address. The passwords are generated per run.
 import frappe
 from frappe.tests.utils import FrappeTestCase
 
+from adx_secure_qr_login.tests import cleanup_test_users
+
 
 class TestQRTokenSecurity(FrappeTestCase):
 	"""Token generation, hashing and payload parsing."""
@@ -45,9 +47,31 @@ class TestQRTokenSecurity(FrappeTestCase):
 		from adx_secure_qr_login.security import tokens
 
 		for bad in ("", None, "not-a-token!!", "https://x/y?qr=abc", "/path?qr=abc",
+					"https://x/y", "https://x/y?nqr=" + tokens.generate_token(),
+					"ftp://x/login?qr=" + tokens.generate_token(),
 					"ADXQR9." + tokens.generate_token(), "A" * 500):
 			with self.subTest(bad=bad):
 				self.assertIsNone(tokens.parse_payload(bad))
+
+	def test_login_url_round_trip(self):
+		"""QR images carry a login URL any generic camera can open."""
+		from adx_secure_qr_login.security import tokens
+
+		token = tokens.generate_token()
+		url = tokens.build_login_url("http://secureQR.local:8080", token)
+		self.assertEqual(
+			url, f"http://secureQR.local:8080/login?qr=ADXQR1.{token}"
+		)
+		self.assertEqual(tokens.parse_payload(url), token)
+		# Trailing slash base + surrounding whitespace tolerated.
+		self.assertEqual(
+			tokens.parse_payload(
+				"  " + tokens.build_login_url("http://h/", token) + "\n"
+			),
+			token,
+		)
+		# No base URL configured: falls back to the bare payload.
+		self.assertEqual(tokens.build_login_url("", token), f"ADXQR1.{token}")
 
 
 def ensure_system_user(email, first_name, roles=()):
@@ -82,11 +106,18 @@ class TestQRValidation(FrappeTestCase):
 
 	def setUp(self):
 		self.user = "qrtest.subject@test.local"
+		cleanup_test_users([self.user])
 		ensure_system_user(self.user, "QRTest", roles=["Stock User"])
+		# Multi-company gate: QR resolution requires an explicit User.company.
+		# Use any real company; the gate only needs a valid association.
+		company = (frappe.get_all("Company", pluck="name", limit=1) or [None])[0]
+		if company:
+			frappe.db.set_value("User", self.user, "company", company)
 		frappe.set_user("Administrator")
 
 	def tearDown(self):
 		frappe.db.rollback()
+		cleanup_test_users([self.user])
 
 	def _credential(self, **kw):
 		"""Mint a credential, clearing any actives first.
@@ -188,6 +219,9 @@ class TestQRRbac(FrappeTestCase):
 	def setUp(self):
 		frappe.set_user("Administrator")
 		self.plain = "qrtest.plain@test.local"
+		cleanup_test_users(
+			[self.plain, "qrtest.subject@test.local", "qrtest.manager@test.local"]
+		)
 		# A desk user with no QR role: the "ordinary ERPNext user" the
 		# specification describes. "Desk User" role is what actually makes
 		# user_type resolve to System User.
@@ -197,6 +231,9 @@ class TestQRRbac(FrappeTestCase):
 
 	def tearDown(self):
 		frappe.db.rollback()
+		cleanup_test_users(
+			[self.plain, self.subject, "qrtest.manager@test.local"]
+		)
 
 	def test_plain_user_cannot_manage_credentials(self):
 		from adx_secure_qr_login.api import qr_manage
@@ -252,8 +289,11 @@ class TestQRAuditIntegrity(FrappeTestCase):
 		with self.assertRaises(frappe.PermissionError):
 			doc.details = "tampered"
 			doc.save()
-		with self.assertRaises(frappe.PermissionError):
-			doc.delete()
+		# Administrators (QR Admin / System Manager / Administrator) may delete;
+		# anyone else is blocked. The test is running as Administrator, so
+		# deletion is allowed now.
+		doc.delete()
+		self.assertFalse(frappe.db.exists("QR Login Audit", name))
 
 	def test_audit_scrubs_secret_details(self):
 		from adx_secure_qr_login.secure_qr_login.doctype.qr_login_audit.qr_login_audit import (

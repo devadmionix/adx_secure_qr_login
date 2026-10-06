@@ -25,6 +25,8 @@ from adx_secure_qr_login.secure_qr_login.constants import (
 	EVENT_INVALID_CREDENTIAL,
 	EVENT_RATE_LIMITED,
 	EVENT_REVOKED_CREDENTIAL,
+	EVENT_SECURITY_VALIDATION_FAILED,
+	REASON_COMPANY_NOT_ASSIGNED,
 	REASON_EXPIRED_CREDENTIAL,
 	REASON_INACTIVE_USER,
 	REASON_INVALID_CREDENTIAL,
@@ -140,7 +142,66 @@ def resolve_credential(raw: str) -> str:
 			REASON_INACTIVE_USER, EVENT_INACTIVE_USER, credential=name, user=doc.user
 		)
 
+	# 7. Explicit company association (multi-company QR login). The credential
+	#    identifies WHO the user is; User.company states which company the QR
+	#    login is bound to. It grants nothing by itself -- all authorization
+	#    still comes from ERPNext roles / User Permissions after the normal
+	#    session is created. Resolved live on every attempt so a company change
+	#    takes effect on the next login; nothing is cached on the credential.
+	validate_user_company(doc.user, name)
+
 	return name
+
+
+def user_has_company_field() -> bool:
+	"""Whether the User.company custom field is installed on this site."""
+	try:
+		return frappe.get_meta("User").has_field("company")
+	except Exception:
+		return False
+
+
+def get_user_company(user: str) -> str | None:
+	"""The explicit company bound to a user for QR login, or None.
+
+	Returns None when the field is not installed, empty, or points at a
+	Company record that no longer exists / is a group (non-transacting).
+	Best-effort read for audit logging; the enforcing twin is
+	`validate_user_company` below.
+	"""
+	if not user or not user_has_company_field():
+		return None
+	try:
+		company = frappe.db.get_value("User", user, "company")
+		if not company or not frappe.db.exists("Company", company):
+			return None
+		if frappe.db.get_value("Company", company, "is_group"):
+			return None
+		return company
+	except Exception:
+		return None
+
+
+def validate_user_company(user: str, credential: str) -> str:
+	"""Enforce the User.company gate. Returns the validated company.
+
+	:raises CredentialRejected: with COMPANY_NOT_ASSIGNED when the field is
+	    missing (fail-closed only when installed: on a site where the custom
+	    field was never synced there is nothing to validate against, so the
+	    check is skipped rather than bricking every QR login).
+	"""
+	if not user_has_company_field():
+		return ""
+
+	company = get_user_company(user)
+	if not company:
+		raise CredentialRejected(
+			REASON_COMPANY_NOT_ASSIGNED,
+			EVENT_SECURITY_VALIDATION_FAILED,
+			credential=credential,
+			user=user,
+		)
+	return company
 
 
 def record_success(credential: str) -> None:

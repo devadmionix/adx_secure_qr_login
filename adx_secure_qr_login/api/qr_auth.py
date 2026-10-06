@@ -183,6 +183,7 @@ def qr_exchange(qr_token: str = None, otp: str = None, tmp_id: str = None) -> di
 			success=False,
 			reason_code=rejected.reason_code,
 			details=rejected.details,
+			company=validation.get_user_company(rejected.user) if rejected.user else None,
 		)
 		return _failed(GENERIC_LOGIN_FAILURE_MESSAGE)
 
@@ -256,7 +257,7 @@ def qr_exchange(qr_token: str = None, otp: str = None, tmp_id: str = None) -> di
 		details={"generation": doc.generation, "used_2fa": bool(otp)},
 		# Hashed, never the sid itself: a raw sid is a resumable bearer token.
 		session_reference=session_guard.session_reference(frappe.session.sid),
-		company=detect_company(),
+		company=validation.get_user_company(user) or detect_company(),
 	)
 
 	if settings.notify_user_on_use:

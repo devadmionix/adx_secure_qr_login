@@ -44,6 +44,16 @@ class QRLoginAudit(Document):
 		)
 
 	def on_trash(self):
+		# Administrators (QR Admin / System Manager) may delete through the
+		# normal UI; everyone else is blocked. This keeps the audit trail
+		# from being shortened by mistake, while still letting the owner
+		# erase it temporarily as they've asked.
+		from adx_secure_qr_login.security.rbac import is_qr_admin
+
+		if frappe.session and (
+			frappe.session.user == "Administrator" or is_qr_admin(frappe.session.user)
+		):
+			return
 		frappe.throw(
 			frappe._("Audit records cannot be deleted."),
 			frappe.PermissionError,

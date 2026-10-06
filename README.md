@@ -35,8 +35,9 @@ levels and company restrictions they already had.
 ```
 ERPNext login page
   -> "Login with QR"
-  -> camera scanner opens
-  -> scan  ADXQR1.<43-char token>
+  -> camera scanner opens (or any phone camera: the QR is a login URL)
+  -> scan  {base_url}/login?qr=ADXQR1.<43-char token>
+  -> login page auto-submits the code over POST
   -> POST /api/method/adx_secure_qr_login.api.qr_auth.qr_exchange
        rate limit (per IP, and per IP+token)
        parse payload, look up credential by SHA-256(token)

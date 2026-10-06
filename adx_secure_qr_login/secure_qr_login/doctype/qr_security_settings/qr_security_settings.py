@@ -51,6 +51,57 @@ class QRSecuritySettings(Document):
 
 		return result
 
+	def generate_weekly_report(self):
+		"""Feature 8 manual run: persist a report for the previous week.
+
+		Bound to the Button of the same name. Calls the same
+		`security.weekly_report` service as the Monday 00:05 scheduler job, so
+		manual and automatic figures can never diverge. Unlike `send_report_now`
+		(email), this stores a `Weekly Security Report` record for history.
+		"""
+		from adx_secure_qr_login.security.weekly_report import (
+			generate_weekly_security_report,
+			previous_week,
+		)
+
+		frm, to = previous_week()
+		result = generate_weekly_security_report(frm, to)
+
+		if result.get("status") == "created":
+			frappe.msgprint(
+				frappe._(
+					"Weekly Security Report {0} created for {1} to {2}: "
+					"{3} successful logins, {4} failed attempts, "
+					"{5} active / {6} expired / {7} revoked credentials."
+				).format(
+					result["report"],
+					frm,
+					to,
+					result["successful_logins"],
+					result["failed_attempts"],
+					result["active_credentials"],
+					result["expired_credentials"],
+					result["revoked_credentials"],
+				),
+				indicator="green",
+			)
+		elif result.get("status") == "exists":
+			frappe.msgprint(
+				frappe._("Report for {0} to {1} already exists ({2}).").format(
+					frm, to, result["report"]
+				),
+				indicator="blue",
+			)
+		else:
+			frappe.msgprint(
+				frappe._("Report not created ({0}).").format(
+					result.get("reason", "unknown")
+				),
+				indicator="orange",
+			)
+
+		return result
+
 	def on_update(self):
 		self.clamp_validity()
 
@@ -67,6 +118,8 @@ class QRSecuritySettings(Document):
 		WATCHED = (
 			"qr_login_enabled",
 			"show_login_option",
+			"allow_self_service_qr",
+			"auto_issue_credential_on_user_create",
 			"default_validity_days",
 			"max_validity_days",
 			"max_active_credentials_per_user",

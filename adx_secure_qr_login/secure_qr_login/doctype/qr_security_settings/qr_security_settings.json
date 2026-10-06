@@ -9,6 +9,8 @@
   "section_break_enabled",
   "qr_login_enabled",
   "show_login_option",
+  "allow_self_service_qr",
+  "auto_issue_credential_on_user_create",
   "allow_self_download",
   "manager_company_scope_enabled",
   "audit_logging_enabled",
@@ -37,7 +39,8 @@
   "weekly_report_recipients",
   "column_break_reporting",
   "audit_retention_days",
-  "send_report_now"
+  "send_report_now",
+  "generate_weekly_report"
  ],
  "fields": [
   {
@@ -56,6 +59,20 @@
    "fieldname": "show_login_option",
    "fieldtype": "Check",
    "label": "Show Login Page Option"
+  },
+  {
+   "default": "0",
+   "description": "Allow logged-out visitors to generate a short-lived login QR from their email on the login page. Disabled by default; enabling it trades some enumeration resistance for convenience.",
+   "fieldname": "allow_self_service_qr",
+   "fieldtype": "Check",
+   "label": "Allow QR Generation From Login Page"
+  },
+  {
+   "default": "1",
+   "description": "Automatically create a QR Login Credential and email its printable code whenever an administrator creates an enabled System User with a company assigned. Skipped for users without a company.",
+   "fieldname": "auto_issue_credential_on_user_create",
+   "fieldtype": "Check",
+   "label": "Auto-Issue QR On User Creation"
   },
   {
    "default": "1",
@@ -231,6 +248,11 @@
    "fieldname": "send_report_now",
    "fieldtype": "Button",
    "label": "Send Weekly Report Now"
+  },
+  {
+   "fieldname": "generate_weekly_report",
+   "fieldtype": "Button",
+   "label": "Generate Weekly Security Report"
   }
  ],
  "index_web_pages_for_search": 1,
