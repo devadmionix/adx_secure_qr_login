@@ -348,8 +348,8 @@ class TestAutoIssueOnUserCreate(FrappeTestCase):
 
 		self.assertEqual(len(sent), 1)
 		self.assertEqual(sent[0]["recipients"], [self.EMAIL])
-		self.assertTrue(sent[0]["attachments"])
-		self.assertTrue(sent[0]["attachments"][0]["fname"].endswith(".png"))
+		self.assertTrue(sent[0].get("inline_images"))
+		self.assertTrue(sent[0]["inline_images"][0]["filename"].endswith(".png"))
 
 	def test_no_company_no_auto_issue(self):
 		cleanup_test_users([self.EMAIL])

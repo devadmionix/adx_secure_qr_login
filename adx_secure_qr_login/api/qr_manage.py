@@ -465,6 +465,18 @@ def issue_credential_for_new_user(doc, method=None) -> dict | None:
 	if not company:
 		return None
 
+	# Propagate the company boundary into ERPNext's native User Permissions.
+	# Without this, the custom `User.company` field only gates QR login while
+	# standard docs (Customer, Sales Order, etc.) are never company-limited.
+	try:
+		frappe.permissions.add_user_permission(
+			"Company", company, user, ignore_permissions=True
+		)
+	except Exception:
+		frappe.log_error(
+			title="Company User Permission failed", message=frappe.get_traceback()
+		)
+
 	existing = frappe.db.get_value(
 		"QR Login Credential",
 		{"user": user, "status": CREDENTIAL_STATUS_ACTIVE},

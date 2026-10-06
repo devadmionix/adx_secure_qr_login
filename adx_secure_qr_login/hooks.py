@@ -149,6 +149,8 @@ doctype_js = {
 # scope rows by subject instead. See permissions/credential_conditions.py.
 permission_query_conditions = {
 	"QR Login Credential": "adx_secure_qr_login.permissions.credential_conditions.get_permission_query_conditions",
+	# Company-isolate the core User list/link field.
+	"User": "adx_secure_qr_login.permissions.user_conditions.get_permission_query_conditions",
 	# The audit trail is security evidence. Administrators and QR Admins see all;
 	# QR Managers see only rows for users they may manage; ordinary desk users
 	# see nothing. See permissions/audit_conditions.py.
@@ -161,6 +163,9 @@ has_permission = {
 	"QR Login Credential": "adx_secure_qr_login.permissions.credential_conditions.has_permission",
 	"QR Login Audit": "adx_secure_qr_login.permissions.audit_conditions.has_permission",
 	"Weekly Security Report": "adx_secure_qr_login.permissions.weekly_report_conditions.has_permission",
+	# Company-isolate the core User list/link field at the same backend level,
+	# otherwise a Company A user can see Company B users.
+	"User": "adx_secure_qr_login.permissions.user_conditions.has_permission",
 }
 
 # Document Events

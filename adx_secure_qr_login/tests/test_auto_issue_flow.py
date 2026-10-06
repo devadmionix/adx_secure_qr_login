@@ -246,9 +246,12 @@ class TestAutoIssueFlow(FrappeTestCase):
 			"QR Login Credential", filters={"user": email}, pluck="name"
 		)
 		self.assertEqual(after, before)
+		self.assertEqual(len(sent), 1)
+		self.assertEqual(sent[0]["recipients"], [email])
+		mail = sent[0]
 		# QR is shown inline via a Content-ID reference (Gmail-safe).
 		self.assertTrue(mail.get("inline_images"))
-		self.assertIn('embed="', sent[0]["message"])
+		self.assertIn('embed="', mail["message"])
 
 		# Non-active credentials refuse resend instead of mailing dead codes.
 		frappe.db.set_value(

@@ -24,15 +24,45 @@ well as in code.
 
 import frappe
 
-from adx_secure_qr_login.security.rbac import can_manage_credentials
+from adx_secure_qr_login.security.rbac import (
+	can_manage_credentials,
+	is_qr_admin,
+	visible_users_for_manager,
+)
+
+
+def _subject_company(doc) -> str | None:
+	subject = doc.get("user")
+	if not subject:
+		return None
+	return frappe.db.get_value("User", subject, "company")
 
 
 def get_permission_query_conditions(user: str | None = None) -> str | None:
-	"""Return a SQL fragment, or None when the user may see every row."""
+	"""Return a SQL fragment, or None when the user may see every row.
+
+	Company boundary rule:
+	- Administrator / QR Admin: all credentials.
+	- QR Manager: only credentials whose subject user sits inside the
+	  companies this manager is explicitly permitted to see.
+	- Everyone else: only their own credential.
+	"""
 	user = user or frappe.session.user
 
-	if user == "Administrator" or can_manage_credentials(user):
+	if user == "Administrator" or is_qr_admin(user):
 		return None
+
+	if can_manage_credentials(user):
+		visible = visible_users_for_manager(user)
+		if visible is None:
+			return None
+		if not visible:
+			return "1 = 0"
+		names = ", ".join(frappe.db.escape(v) for v in visible)
+		return (
+			f"`tabQR Login Credential`.`user` IN ({names}) OR "
+			f"`tabQR Login Credential`.`owner` = {frappe.db.escape(user)}"
+		)
 
 	# Escaping matters: `user` is a session value, but it is still data and this
 	# is still string-built SQL.
@@ -54,8 +84,19 @@ def has_permission(doc, ptype: str, user: str | None = None) -> bool:
 	"""
 	user = user or frappe.session.user
 
-	if user == "Administrator" or can_manage_credentials(user):
+	if user == "Administrator" or is_qr_admin(user):
 		return True
+
+	if can_manage_credentials(user):
+		subject_company = _subject_company(doc)
+		if not subject_company:
+			return False
+		visible = visible_users_for_manager(user)
+		if visible is None:
+			return True
+		return bool(visible) and subject_company in {
+			frappe.db.get_value("User", u, "company") for u in (visible or [])
+		}
 
 	# Subject or issuer of this specific credential.
 	return doc.get("user") == user or doc.get("owner") == user
