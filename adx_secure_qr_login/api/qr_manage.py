@@ -678,7 +678,7 @@ def _send_welcome_mail(
 		subject=frappe._("Welcome to {0} - Your Secure QR Login").format(brand),
 		message=message,
 		inline_images=inline_images,
-		now=False,
+		now=True,
 	)
 
 
