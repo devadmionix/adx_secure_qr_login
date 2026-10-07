@@ -49,7 +49,7 @@ class QRSecuritySettings(Document):
 			frm, to = result["window"]
 			frappe.msgprint(
 				frappe._(
-					"Weekly QR Security Report queued for {0} recipient(s) covering {1} to {2}."
+					"Weekly QR Security Report sent to {0} recipient(s) covering {1} to {2}."
 				).format(result["recipients"], frm, to),
 				indicator="green",
 			)
@@ -149,6 +149,8 @@ class QRSecuritySettings(Document):
 			"audit_logging_enabled",
 			"manager_company_scope_enabled",
 			"allow_self_download",
+			"allow_self_generate_qr",
+			"allow_self_revoke_qr",
 			"require_https",
 			"weekly_report_enabled",
 			"weekly_report_recipient_role",

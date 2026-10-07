@@ -36,6 +36,7 @@ from adx_secure_qr_login.secure_qr_login.constants import (
 	REASON_OK,
 	REASON_RATE_LIMITED,
 	REASON_REPLAY_DETECTED,
+	REASON_SECURITY_VALIDATION_FAILED,
 )
 from adx_secure_qr_login.secure_qr_login.doctype.qr_login_audit.qr_login_audit import (
 	detect_company,
@@ -213,6 +214,23 @@ def qr_exchange(qr_token: str = None, otp: str = None, tmp_id: str = None) -> di
 
 	doc = frappe.get_doc("QR Login Credential", credential)
 	user = doc.user
+
+	# ------------------------------------------------------- device policy
+	# `device_verification = require_trusted` refuses a device an administrator
+	# has revoked. Checked before the 2FA step so no OTP challenge is minted for
+	# a device that would be refused anyway. Not counted as a credential failure:
+	# the credential is fine, the device is not.
+	if not devices.is_trusted_for(user, devices.current_device_id(user)):
+		log_event(
+			EVENT_SECURITY_VALIDATION_FAILED,
+			user=user,
+			credential=credential,
+			success=False,
+			reason_code=REASON_SECURITY_VALIDATION_FAILED,
+			details={"reason": "device_revoked"},
+			company=validation.get_user_company(user),
+		)
+		return _failed(GENERIC_LOGIN_FAILURE_MESSAGE)
 
 	# ------------------------------------------------------------- 2FA step
 	if settings.require_2fa_on_qr_login:

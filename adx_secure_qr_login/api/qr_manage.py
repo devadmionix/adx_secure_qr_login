@@ -162,11 +162,34 @@ def generate_credential(
 	"""Mint a new bearer credential for an existing Frappe User."""
 	rbac.assert_can_manage_target("generate_credential", user)
 
+	return _issue_credential(user, validity_days, device_label)
+
+
+def _issue_credential(
+	user: str,
+	validity_days: int | None = None,
+	device_label: str | None = None,
+	trigger: str | None = None,
+) -> dict:
+	"""Mint, commit and audit one credential. Authorization is the caller's job.
+
+	Shared by `generate_credential` (managers) and `qr_my.generate_my_qr`
+	(self-service) so both paths apply the same validation, cap, expiry and audit
+	row. Nothing else may mint a credential.
+	"""
 	target = _resolve_target_user(user)
 	_enforce_active_cap(target)
 
 	result = _mint(target, validity_days, device_label, generation=1)
 	frappe.db.commit()
+
+	details = {
+		"generation": result["doc"].generation,
+		"expires_on": str(result["doc"].expires_on),
+		"device_label": result["doc"].device_label,
+	}
+	if trigger:
+		details["trigger"] = trigger
 
 	log_event(
 		EVENT_GENERATED,
@@ -174,14 +197,87 @@ def generate_credential(
 		credential=result["doc"].name,
 		success=True,
 		reason_code=REASON_OK,
-		details={
-			"generation": result["doc"].generation,
-			"expires_on": str(result["doc"].expires_on),
-			"device_label": result["doc"].device_label,
-		},
+		details=details,
 	)
 
 	return _public_response(result)
+
+
+@frappe.whitelist(methods=["GET"])
+def get_user_qr_summary(user: str) -> dict:
+	"""Read-only QR status for the User form. Never returns token material.
+
+	Visible to the user themself, a QR Admin, or a QR Manager whose company
+	scope covers the user (same rule as `list_user_credentials`). Anyone else
+	gets `visible = False` and nothing else, so the form can simply hide the
+	section.
+	"""
+	if not rbac.can_view_user(user):
+		return {"visible": False}
+
+	today = frappe.utils.nowdate()
+	active = frappe.get_all(
+		"QR Login Credential",
+		filters={
+			"user": user,
+			"status": CREDENTIAL_STATUS_ACTIVE,
+			"expires_on": (">=", today),
+		},
+		fields=["name", "expires_on"],
+		order_by="expires_on desc",
+		limit_page_length=0,
+	)
+
+	from adx_secure_qr_login.security import validation
+
+	return {
+		"visible": True,
+		"can_manage": bool(
+			rbac.can_manage_credentials() and user != "Administrator"
+		),
+		"qr_login_enabled": 1 if validation._is_user_qr_enabled(user) else 0,
+		"active_count": len(active),
+		"expires_on": str(active[0].expires_on) if active else None,
+		"status": CREDENTIAL_STATUS_ACTIVE if active else "None",
+		"company": validation.get_user_company(user),
+		"company_required": bool(validation.user_has_company_field()),
+	}
+
+
+@frappe.whitelist(methods=["POST"])
+def generate_user_qr(user: str) -> dict:
+	"""User form "Generate QR": validate, then reuse `generate_credential`.
+
+	No generation logic lives here. Permission, the active-credential cap,
+	validity window, QR image, commit and the audit event all come from
+	`generate_credential`. This wrapper only adds the User-form preconditions
+	and strips the one-time token: the form shows the QR image once, never the
+	secret as text.
+	"""
+	# Permission first, so a refused caller learns nothing about the target.
+	rbac.assert_can_manage_target("generate_user_qr", user)
+
+	from adx_secure_qr_login.security import validation
+
+	target = _resolve_target_user(user)
+
+	if not validation._is_user_qr_enabled(target):
+		frappe.throw(
+			frappe._("QR login is disabled for this user. Enable it first."),
+			frappe.ValidationError,
+		)
+
+	if validation.user_has_company_field() and not validation.get_user_company(target):
+		frappe.throw(
+			frappe._(
+				"Set a Company on this user first. A QR credential without a company cannot log in."
+			),
+			frappe.ValidationError,
+		)
+
+	result = generate_credential(target)
+	result.pop("one_time_token", None)
+	return result
 
 
 @frappe.whitelist(methods=["POST"])
@@ -258,6 +354,17 @@ def revoke_credential(credential: str, reason: str | None = None) -> dict:
 	"""Revoke a credential permanently and destroy its printable QR."""
 	rbac.assert_can_manage_credential(credential, "revoke_credential")
 
+	return _revoke_credential(credential, reason)
+
+
+def _revoke_credential(
+	credential: str, reason: str | None = None, trigger: str | None = None
+) -> dict:
+	"""Revoke, destroy the image, end sessions, audit. Authorization is the caller's job.
+
+	Shared by `revoke_credential` (managers) and `qr_my.revoke_my_qr`
+	(self-service).
+	"""
 	doc = frappe.get_doc("QR Login Credential", credential)
 
 	if doc.status == CREDENTIAL_STATUS_REVOKED:
@@ -289,7 +396,11 @@ def revoke_credential(credential: str, reason: str | None = None) -> dict:
 		credential=doc.name,
 		success=True,
 		reason_code=REASON_OK,
-		details={"reason": doc.revocation_reason, "sessions_terminated": terminated},
+		details={
+			"reason": doc.revocation_reason,
+			"sessions_terminated": terminated,
+			**({"trigger": trigger} if trigger else {}),
+		},
 	)
 
 	if terminated:
@@ -671,12 +782,13 @@ def _send_welcome_mail(
     <p style="font-size:14px;color:#111827;margin:16px 0 0;">Regards,<br />{brand}</p>
   </div>
 </div>"""
-	frappe.sendmail(
+	from adx_secure_qr_login.security.mailer import send_immediately
+
+	send_immediately(
 		recipients=[user],
 		subject=frappe._("Welcome to {0} - Your Secure QR Login").format(brand),
 		message=message,
 		inline_images=inline_images,
-		now=True,
 	)
 
 

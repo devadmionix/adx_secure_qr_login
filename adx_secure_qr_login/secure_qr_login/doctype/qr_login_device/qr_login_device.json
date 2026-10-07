@@ -80,13 +80,15 @@
    "default": "0",
    "fieldname": "trusted",
    "fieldtype": "Check",
-   "label": "Trusted"
+   "label": "Trusted",
+   "read_only": 1
   },
   {
    "default": "0",
    "fieldname": "revoked",
    "fieldtype": "Check",
-   "label": "Revoked"
+   "label": "Revoked",
+   "read_only": 1
   },
   {
    "fieldname": "revoked_on",

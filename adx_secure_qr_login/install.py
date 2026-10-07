@@ -39,9 +39,17 @@ def after_migrate():
 
 
 def ensure_desk_navigation():
-	from adx_secure_qr_login.desktop import ensure_dashboard_link
+	from adx_secure_qr_login.desktop import (
+		ensure_audit_analysis_link,
+		ensure_dashboard_link,
+		ensure_devices_link,
+		ensure_my_qr_link,
+	)
 
 	ensure_dashboard_link()
+	ensure_devices_link()
+	ensure_my_qr_link()
+	ensure_audit_analysis_link()
 
 
 def before_uninstall():

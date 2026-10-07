@@ -318,17 +318,17 @@ adx.qr_dashboard.template = function (d) {
 	});
 
 	const cards = [
-		adx.qr_dashboard.card("Active credentials", c.active, "green", [
+		adx.qr_dashboard.card("Active QRs", c.active, "green", [
 			"List",
 			"QR Login Credential",
 			{ status: "Active" },
 		]),
-		adx.qr_dashboard.card("Expired credentials", c.expired, "orange", [
+		adx.qr_dashboard.card("Expired QRs", c.expired, "orange", [
 			"List",
 			"QR Login Credential",
 			{ status: "Expired" },
 		]),
-		adx.qr_dashboard.card("Revoked credentials", c.revoked, "red", [
+		adx.qr_dashboard.card("Revoked QRs", c.revoked, "red", [
 			"List",
 			"QR Login Credential",
 			{ status: "Revoked" },

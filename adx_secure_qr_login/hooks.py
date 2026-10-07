@@ -56,8 +56,12 @@ web_include_js = "/assets/adx_secure_qr_login/js/qr_login_scan.js"
 doctype_js = {
 	"QR Login Credential": "public/js/qr_login_credential.js",
 	"QR Security Settings": "public/js/qr_security_settings.js",
+	"User": "public/js/user_qr.js",
+	"QR Login Device": "public/js/qr_login_device.js",
 }
-# doctype_list_js = {"doctype" : "public/js/doctype_list.js"}
+doctype_list_js = {
+	"QR Login Audit": "public/js/qr_login_audit_list.js",
+}
 # doctype_tree_js = {"doctype" : "public/js/doctype_tree.js"}
 # doctype_calendar_js = {"doctype" : "public/js/doctype_calendar.js"}
 
@@ -240,10 +244,12 @@ scheduler_events = {
 
 # Fixtures
 # --------
-# Ships the two Custom Fields this app owns on User:
+# Ships the Custom Fields this app owns on User:
 #
 #   * `company`             -- multi-company QR login gate
 #   * `qr_login_enabled`    -- per-user QR login on/off switch
+#   * `qr_login_info`, `qr_generate_button`, `qr_view_credentials_button`
+#                           -- QR status block + actions on the User form
 #
 # A Custom Field never touches Frappe/ERPNext core files; it syncs into any
 # site on migrate. Filtered to this app's fields so unrelated site
@@ -251,7 +257,19 @@ scheduler_events = {
 fixtures = [
 	{
 		"dt": "Custom Field",
-		"filters": [["name", "in", ["User-company", "User-qr_login_enabled"]]],
+		"filters": [
+			[
+				"name",
+				"in",
+				[
+					"User-company",
+					"User-qr_login_enabled",
+					"User-qr_login_info",
+					"User-qr_generate_button",
+					"User-qr_view_credentials_button",
+				],
+			]
+		],
 	}
 ]
 

@@ -25,6 +25,9 @@ import frappe
 from adx_secure_qr_login.secure_qr_login.constants import (
 	EVENT_DEVICE_REGISTERED,
 	EVENT_DEVICE_REVOKED,
+	EVENT_DEVICE_TRUSTED,
+	EVENT_DEVICE_UNTRUSTED,
+	EVENT_SESSION_REVOKED,
 	REASON_OK,
 )
 
@@ -42,6 +45,15 @@ def fingerprint(user_agent: str, ip_address: str, user: str) -> str:
 	"""
 	raw = f"{user}|{user_agent or ''}|{ip_address or ''}".encode()
 	return hashlib.sha256(raw).hexdigest()[:32]
+
+
+def current_device_id(user: str) -> str:
+	"""Device id for the request being served, derived exactly as tracking does."""
+	return fingerprint(
+		frappe.get_request_header("User-Agent") or "",
+		getattr(frappe.local, "request_ip", None),
+		user,
+	)
 
 
 def parse_browser(user_agent: str) -> str:
@@ -99,7 +111,7 @@ def track_login(user: str) -> str | None:
 
 		user_agent = frappe.get_request_header("User-Agent") or ""
 		ip_address = getattr(frappe.local, "request_ip", None)
-		device_id = fingerprint(user_agent, ip_address, user)
+		device_id = current_device_id(user)
 
 		existing = frappe.db.exists(
 			"QR Login Device", {"device_id": device_id, "user": user}
@@ -169,11 +181,19 @@ def is_trusted_for(user: str, device_id: str) -> bool:
 	return not row.get("revoked")
 
 
-def revoke_device(device: str, actor: str | None = None) -> None:
-	"""Mark a device revoked and audit it. Assumes authorization already passed."""
+def revoke_device(device: str, actor: str | None = None) -> int:
+	"""Mark a device revoked, end the owner's live sessions, and audit it.
+
+	Assumes authorization already passed. Returns the number of sessions closed.
+
+	Sessions are not bound to a device in Frappe (a session is keyed on sid), so
+	"terminate the device's session" can only mean ending the owner's live
+	sessions -- the same mechanism credential revocation uses. Skipped when the
+	device was already revoked, so a repeat call never logs anyone out.
+	"""
 	doc = frappe.get_doc("QR Login Device", device)
 	if doc.revoked:
-		return
+		return 0
 	doc.revoked = 1
 	doc.revoked_on = frappe.utils.now()
 	doc.revoked_by = actor or frappe.session.user
@@ -183,8 +203,59 @@ def revoke_device(device: str, actor: str | None = None) -> None:
 		EVENT_DEVICE_REVOKED, user=doc.user, device=device, actor=actor
 	)
 
+	from adx_secure_qr_login.security import session_guard
 
-def log_device_event(event: str, *, user: str, device: str, actor: str | None = None):
+	terminated = session_guard.terminate_user_sessions(
+		doc.user, reason=f"QR device {device} revoked"
+	)
+	if terminated:
+		log_device_event(
+			EVENT_SESSION_REVOKED,
+			user=doc.user,
+			device=device,
+			actor=actor,
+			extra={"sessions_terminated": terminated, "trigger": "device_revoked"},
+		)
+	return terminated
+
+
+def set_trusted(device: str, trusted: bool, actor: str | None = None) -> bool:
+	"""Mark or unmark a device as trusted and audit the change.
+
+	Assumes authorization already passed. Returns True when the state changed.
+	A revoked device cannot be marked trusted.
+	"""
+	doc = frappe.get_doc("QR Login Device", device)
+
+	if trusted and doc.revoked:
+		frappe.throw(
+			frappe._("A revoked device cannot be marked as trusted."),
+			frappe.ValidationError,
+		)
+
+	if bool(doc.trusted) == bool(trusted):
+		return False
+
+	doc.trusted = 1 if trusted else 0
+	doc.flags.ignore_permissions = True
+	doc.save(ignore_permissions=True)
+	log_device_event(
+		EVENT_DEVICE_TRUSTED if trusted else EVENT_DEVICE_UNTRUSTED,
+		user=doc.user,
+		device=device,
+		actor=actor,
+	)
+	return True
+
+
+def log_device_event(
+	event: str,
+	*,
+	user: str,
+	device: str,
+	actor: str | None = None,
+	extra: dict | None = None,
+):
 	from adx_secure_qr_login.secure_qr_login.doctype.qr_login_audit.qr_login_audit import (
 		log_event,
 	)
@@ -195,5 +266,5 @@ def log_device_event(event: str, *, user: str, device: str, actor: str | None = 
 		success=True,
 		reason_code=REASON_OK,
 		actor=actor or frappe.session.user,
-		details={"device": device},
+		details={"device": device, **(extra or {})},
 	)

@@ -90,10 +90,10 @@ def revoke_device(device: str) -> dict:
 
 	# The mutation and its audit row live in `security.devices` so the desk form
 	# and this endpoint cannot diverge in what they write.
-	devices.revoke_device(device)
+	terminated = devices.revoke_device(device)
 	frappe.db.commit()
 
-	return {"device": device, "status": "revoked"}
+	return {"device": device, "status": "revoked", "sessions_terminated": terminated}
 
 
 @frappe.whitelist()
@@ -101,10 +101,7 @@ def trust_device(device: str) -> dict:
 	"""Mark a device as trusted."""
 	rbac.assert_can_manage_device(device, "trust_device")
 
-	doc = frappe.get_doc("QR Login Device", device)
-	doc.trusted = 1
-	doc.save(ignore_permissions=True)
-
+	devices.set_trusted(device, True)
 	frappe.db.commit()
 
 	return {"device": device, "trusted": True}
@@ -115,10 +112,7 @@ def untrust_device(device: str) -> dict:
 	"""Remove trusted status from a device."""
 	rbac.assert_can_manage_device(device, "untrust_device")
 
-	doc = frappe.get_doc("QR Login Device", device)
-	doc.trusted = 0
-	doc.save(ignore_permissions=True)
-
+	devices.set_trusted(device, False)
 	frappe.db.commit()
 
 	return {"device": device, "trusted": False}

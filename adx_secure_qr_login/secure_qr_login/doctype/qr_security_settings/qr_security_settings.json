@@ -12,6 +12,8 @@
   "allow_self_service_qr",
   "auto_issue_credential_on_user_create",
   "allow_self_download",
+  "allow_self_generate_qr",
+  "allow_self_revoke_qr",
   "manager_company_scope_enabled",
   "audit_logging_enabled",
   "require_https",
@@ -89,6 +91,20 @@
    "fieldname": "allow_self_download",
    "fieldtype": "Check",
    "label": "Allow Users To Download Own QR"
+  },
+  {
+   "default": "0",
+   "description": "Show a Generate My QR button on the My QR page so users can issue their own QR credential. Off by default; administrators can always issue QRs.",
+   "fieldname": "allow_self_generate_qr",
+   "fieldtype": "Check",
+   "label": "Allow Users To Generate Own QR"
+  },
+  {
+   "default": "0",
+   "description": "Show a Revoke My QR button on the My QR page so users can revoke their own active QR credential (this also ends their live sessions).",
+   "fieldname": "allow_self_revoke_qr",
+   "fieldtype": "Check",
+   "label": "Allow Users To Revoke Own QR"
   },
   {
    "default": "1",

@@ -117,7 +117,7 @@ frappe.ui.form.on("QR Login Credential", {
 									if (r && r.message && r.message.mailed) {
 										frappe.msgprint({
 											title: __("Email queued"),
-											message: __("The welcome email was queued for {0}.", [r.message.user]),
+											message: __("The welcome email was sent to {0}.", [r.message.user]),
 											indicator: "green",
 										});
 										updateMailChips();

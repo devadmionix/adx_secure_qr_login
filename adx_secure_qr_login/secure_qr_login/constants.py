@@ -58,6 +58,8 @@ EVENT_UNAUTHORIZED_MANAGEMENT = "Unauthorized QR Management"
 EVENT_SECURITY_VALIDATION_FAILED = "Security Validation Failed"
 EVENT_DEVICE_REVOKED = "Device Revoked"
 EVENT_DEVICE_REGISTERED = "Device Registered"
+EVENT_DEVICE_TRUSTED = "Device Trusted"
+EVENT_DEVICE_UNTRUSTED = "Device Untrusted"
 
 # Order must match the `event` Select options in qr_login_audit.json exactly:
 # frappe validates the value on insert.
@@ -80,6 +82,8 @@ EVENTS = (
 	EVENT_SECURITY_VALIDATION_FAILED,
 	EVENT_DEVICE_REVOKED,
 	EVENT_DEVICE_REGISTERED,
+	EVENT_DEVICE_TRUSTED,
+	EVENT_DEVICE_UNTRUSTED,
 )
 
 # ------------------------------------------------------------------- reasons
