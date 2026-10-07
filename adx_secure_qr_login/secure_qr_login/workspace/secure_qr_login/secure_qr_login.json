@@ -18,15 +18,6 @@
     {
       "hidden": 0,
       "is_query_report": 0,
-      "label": "Manage",
-      "link_count": 4,
-      "link_type": "DocType",
-      "onboard": 0,
-      "type": "Card Break"
-    },
-    {
-      "hidden": 0,
-      "is_query_report": 0,
       "label": "QR Login Credential",
       "link_count": 0,
       "link_to": "QR Login Credential",
@@ -35,15 +26,86 @@
       "type": "Link"
     },
     {
-      "label": "My QR",
-      "type": "Page",
-      "link_to": "my-qr",
       "hidden": 0,
-      "icon": "fa fa-qrcode",
-      "color": "#4463F0"
+      "is_query_report": 0,
+      "label": "QR Login Audit",
+      "link_count": 0,
+      "link_to": "QR Login Audit",
+      "link_type": "DocType",
+      "onboard": 0,
+      "type": "Link"
+    },
+    {
+      "hidden": 0,
+      "is_query_report": 0,
+      "label": "Devices & Sessions",
+      "link_count": 0,
+      "link_to": "QR Login Device",
+      "link_type": "DocType",
+      "onboard": 0,
+      "type": "Link"
+    },
+    {
+      "hidden": 0,
+      "is_query_report": 0,
+      "label": "My QR",
+      "link_count": 0,
+      "link_to": "my-qr",
+      "link_type": "Page",
+      "onboard": 0,
+      "type": "Link"
+    },
+    {
+      "hidden": 0,
+      "is_query_report": 0,
+      "label": "QR Security Settings",
+      "link_count": 0,
+      "link_to": "QR Security Settings",
+      "link_type": "DocType",
+      "onboard": 0,
+      "type": "Link"
+    },
+    {
+      "hidden": 0,
+      "is_query_report": 0,
+      "label": "Reports",
+      "link_count": 3,
+      "link_type": "DocType",
+      "onboard": 0,
+      "type": "Card Break"
+    },
+    {
+      "hidden": 0,
+      "is_query_report": 0,
+      "label": "Weekly Security Report",
+      "link_count": 0,
+      "link_to": "Weekly Security Report",
+      "link_type": "Report",
+      "onboard": 0,
+      "type": "Link"
+    },
+    {
+      "hidden": 0,
+      "is_query_report": 0,
+      "label": "QR Login Audit Analysis",
+      "link_count": 0,
+      "link_to": "QR Login Audit Analysis",
+      "link_type": "Report",
+      "onboard": 0,
+      "type": "Link"
+    },
+    {
+      "hidden": 0,
+      "is_query_report": 0,
+      "label": "QR Security Dashboard",
+      "link_count": 0,
+      "link_to": "qr-security-dashboard",
+      "link_type": "Page",
+      "onboard": 0,
+      "type": "Link"
     }
   ],
-  "modified": "2026-10-06 11:15:58.642357",
+  "modified": "2026-10-07 17:20:00.000000",
   "modified_by": "Administrator",
   "module": "Secure QR Login",
   "name": "Secure QR Login",

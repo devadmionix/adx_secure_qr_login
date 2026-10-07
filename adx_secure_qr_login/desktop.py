@@ -321,6 +321,56 @@ AUDIT_REPORT = "QR Login Audit Analysis"
 AUDIT_DOCTYPE = "QR Login Audit"
 AUDIT_LABEL = "QR Login Audit"
 
+_LINK_TYPES = {"DocType", "Page", "Report", "Workspace", "Dashboard", "URL"}
+
+
+def repair_workspace_link_types() -> bool:
+	"""Give every workspace link a `link_type`, or the workspace fails to render.
+
+	`Workspace.get_links()` (frappe/desk/desktop.py:213) calls
+	`DeskViews.is_item_allowed(item.link_to, item.link_type)`, which calls
+	`item_type.lower()` with no guard. One link row missing `link_type` therefore
+	raises `AttributeError: 'NoneType' object has no attribute 'lower'` and the
+	whole workspace renders blank -- for every user, including Administrator, with
+	no hint about which link is at fault.
+
+	Derived from the target's own doctype where possible, and from the label for
+	the rest. Card Breaks are pure separators and carry a harmless default.
+	"""
+	if not frappe.db.exists("Workspace", WORKSPACE):
+		return False
+
+	try:
+		workspace = frappe.get_doc("Workspace", WORKSPACE)
+		changed = False
+
+		for link in workspace.get("links") or []:
+			if link.get("link_type") in _LINK_TYPES:
+				continue
+
+			if link.get("type") == "Card Break" or not link.get("link_to"):
+				link.link_type = "DocType"
+			elif frappe.db.exists("Page", link.link_to):
+				link.link_type = "Page"
+			elif frappe.db.exists("Report", link.link_to):
+				link.link_type = "Report"
+			elif frappe.db.exists("DocType", link.link_to):
+				link.link_type = "DocType"
+			else:
+				link.link_type = "DocType"
+
+			changed = True
+
+		if changed:
+			workspace.flags.ignore_permissions = True
+			workspace.save(ignore_permissions=True)
+		return True
+	except Exception:
+		frappe.log_error(
+			title="QR workspace link_type repair failed", message=frappe.get_traceback()
+		)
+		return False
+
 _STALE_AUDIT_PAGES = frozenset({"qr-login-audit"})
 
 def ensure_audit_link() -> bool:
@@ -484,3 +534,141 @@ def ensure_audit_analysis_link() -> bool:
 		frappe.log_error(title="Audit analysis sidebar link failed", message=frappe.get_traceback())
 
 	return ok
+
+
+# ---------------------------------------------------------------------------
+# Canonical sidebar layout
+# ---------------------------------------------------------------------------
+# Frappe v16 renders the desk sidebar from the `Workspace Sidebar` doctype, NOT
+# from `Workspace.links` -- that field only feeds the legacy workspace editor.
+# Editing the shipped `Workspace` JSON therefore has no effect on what a user
+# actually sees in the sidebar, and `bench migrate` rebuilds `Workspace Sidebar`
+# from the module on every run.
+#
+# The `ensure_*_link()` helpers above can only *append* one missing entry each,
+# which cannot express grouping or ordering: `ensure_dashboard_link()` in
+# particular anchors on "QR Security Settings" and so would push the dashboard
+# back to the top level. The order is therefore declared once, here, and
+# re-applied after install and after every migrate. `ensure_desk_navigation()`
+# calls this last, making it the authority for sidebar content and position.
+#
+# A `Section Break` item is the collapsible group header. Frappe nests every
+# following item with `child = 1` under the most recent section break
+# (frappe/public/js/frappe/ui/sidebar/sidebar.js, `find_nested_items`), so
+# grouping is expressed by ordering plus that flag -- nothing else.
+
+CREDENTIAL_DOCTYPE = "QR Login Credential"
+CREDENTIAL_LABEL = "QR Login Credential"
+SETTINGS_DOCTYPE = "QR Security Settings"
+SETTINGS_LABEL = "QR Security Settings"
+WEEKLY_REPORT = "Weekly Security Report"
+REPORTS_SECTION_LABEL = "Reports"
+
+SIDEBAR_LAYOUT = (
+	{
+		"type": "Link", "link_type": "DocType",
+		"link_to": CREDENTIAL_DOCTYPE, "label": CREDENTIAL_LABEL, "icon": "key",
+	},
+	{
+		"type": "Link", "link_type": "DocType",
+		"link_to": AUDIT_DOCTYPE, "label": AUDIT_LABEL, "icon": "table",
+	},
+	{
+		"type": "Link", "link_type": "DocType",
+		"link_to": DEVICE_DOCTYPE, "label": DEVICE_LABEL, "icon": "monitor",
+	},
+	{
+		"type": "Link", "link_type": "Page",
+		"link_to": MY_QR_PAGE, "label": MY_QR_LABEL, "icon": "qr-code",
+	},
+	{
+		"type": "Link", "link_type": "DocType",
+		"link_to": SETTINGS_DOCTYPE, "label": SETTINGS_LABEL, "icon": "settings",
+	},
+	{"type": "Section Break", "label": REPORTS_SECTION_LABEL},
+	{
+		"type": "Link", "link_type": "Report", "child": 1,
+		"link_to": WEEKLY_REPORT, "label": WEEKLY_REPORT, "icon": "table",
+	},
+	{
+		"type": "Link", "link_type": "Report", "child": 1,
+		"link_to": AUDIT_REPORT, "label": AUDIT_REPORT, "icon": "table",
+	},
+	{
+		"type": "Link", "link_type": "Page", "child": 1,
+		"link_to": DASHBOARD_PAGE, "label": DASHBOARD_LABEL, "icon": "dashboard",
+	},
+)
+
+# Child rows carry Frappe's document bookkeeping, which never appears in the
+# layout specs and must be ignored when deciding whether a save is needed.
+_LAYOUT_KEYS = frozenset({k for spec in SIDEBAR_LAYOUT for k in spec})
+
+
+def apply_sidebar_layout() -> bool:
+	"""Rewrite the `Workspace Sidebar` items to match `SIDEBAR_LAYOUT`.
+
+	Replaces the rows outright rather than appending, so this both fixes the
+	order and repairs a sidebar an older version appended to. It is a no-op
+	when the saved rows already match, so an unchanged layout costs no write.
+
+	Never raises: a sidebar that cannot be laid out must not fail migrate.
+	Returns True when the sidebar matches the layout afterwards.
+	"""
+	if not frappe.db.exists("Workspace Sidebar", WORKSPACE):
+		return False
+
+	try:
+		sidebar = frappe.get_doc("Workspace Sidebar", WORKSPACE)
+		if _normalized_items(sidebar) == _expected_items():
+			return True
+
+		sidebar.set("items", [])
+		for spec in _expected_items():
+			sidebar.append("items", dict(spec))
+		sidebar.flags.ignore_permissions = True
+		sidebar.save(ignore_permissions=True)
+		return True
+	except Exception:
+		frappe.log_error(
+			title="QR sidebar layout failed", message=frappe.get_traceback()
+		)
+		return False
+
+
+def _expected_items() -> list:
+	"""The layout, minus entries whose target does not exist on this site.
+
+	Skipping rather than linking to a missing DocType keeps a partially
+	installed site free of dead sidebar entries.
+	"""
+	items = []
+	for spec in SIDEBAR_LAYOUT:
+		if spec.get("type") == "Link" and not _link_target_exists(spec):
+			continue
+		items.append(spec)
+	return items
+
+
+def _link_target_exists(spec: dict) -> bool:
+	link_type = spec.get("link_type")
+	link_to = spec.get("link_to")
+	if link_type in ("DocType", "Report"):
+		return bool(frappe.db.exists(link_type, link_to))
+	if link_type == "Page":
+		return bool(frappe.db.exists("Page", link_to))
+	return True
+
+
+def _normalized_items(sidebar) -> list:
+	"""Saved rows reduced to comparable layout fields, empty values dropped."""
+	rows = []
+	for row in sidebar.get("items") or []:
+		rows.append(
+			{
+				k: row.get(k)
+				for k in _LAYOUT_KEYS
+				if row.get(k) not in (None, 0, "")
+			}
+		)
+	return rows

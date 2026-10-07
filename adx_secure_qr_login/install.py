@@ -123,23 +123,189 @@ def rename_legacy_roles():
 		else:
 			frappe.db.set_value("Role", old_name, "role_name", new_name)
 
+	_prune_stale_role_references()
+
 	frappe.db.commit()
+
+
+def _prune_stale_role_references():
+	"""Repair child rows that store a role *name* and so survive a Role rename.
+
+	Frappe stores role names as plain strings in several child tables. Renaming the
+	`Role` document updates none of them, leaving rows that name a role which no
+	longer exists. Two of those silently break access:
+
+	1. `Custom DocPerm` -- `Meta.set_custom_permissions()` (frappe/model/meta.py:640)
+	   replaces a DocType's permissions *entirely* with matching rows, so one stale
+	   row naming "QR Admin" masks the DocType JSON: `get_role_permissions()`
+	   matches nothing, `read` becomes 0, and every QR Admin/Manager is refused on
+	   that DocType with no visible cause.
+
+	2. `Has Role` on a Page -- `Page.is_permitted()` compares these against the
+	   session user's roles, so a stale "QR Admin" entry hides the dashboard from
+	   the very users who should see it.
+
+	Rows whose role is a known pre-rename name are *rewritten* to the current
+	name, which restores the access the row was meant to grant. Anything naming a
+	role that neither exists now nor was a legacy QR name is dropped.
+	"""
+	rename_map = {
+		LEGACY_ROLE_ADMIN: ROLE_ADMIN,
+		LEGACY_ROLE_MANAGER: ROLE_MANAGER,
+	}
+
+	for doctype in ("Custom DocPerm", "Has Role"):
+		for row in frappe.get_all(
+			doctype,
+			fields=["name", "role"],
+			limit_page_length=0,
+			ignore_permissions=True,
+		):
+			if frappe.db.exists("Role", row.role):
+				continue
+			new_role = rename_map.get(row.role)
+			if new_role and not frappe.db.exists(
+				doctype, {"name": row.name, "role": new_role}
+			):
+				frappe.db.set_value(doctype, row.name, "role", new_role)
+			else:
+				frappe.db.delete(doctype, row.name)
+
+	_repoint_role_link_fields(rename_map)
+	_sync_page_roles_from_json()
+
+
+def _repoint_role_link_fields(rename_map: dict) -> None:
+	"""Rewrite Link-to-Role fields that still hold a pre-rename role name.
+
+	`Document._validate_links()` (frappe/model/document.py:1221) refuses to save a
+	document whose Link field names a row that does not exist. A settings field
+	left pointing at "QR Admin" therefore makes the whole QR Security Settings
+	single unsaveable, which breaks every page that writes to it -- with a
+	`LinkValidationError` that says nothing about roles.
+	"""
+	for meta in frappe.get_all(
+		"DocField",
+		filters={"fieldtype": "Link", "options": "Role"},
+		fields=["parent", "fieldname"],
+		limit_page_length=0,
+		ignore_permissions=True,
+	):
+		doctype, fieldname = meta.parent, meta.fieldname
+		if not frappe.db.exists("DocType", doctype):
+			continue
+
+		if frappe.get_meta(doctype).issingle:
+			# Singles live in tabSingles keyed by field, not in their own table.
+			stored = frappe.db.get_single_value(doctype, fieldname)
+			if stored in rename_map:
+				frappe.db.set_single_value(
+					doctype, fieldname, rename_map[stored], update_modified=False
+				)
+			continue
+
+		if not frappe.db.table_exists(doctype):
+			continue
+
+		stored = frappe.db.get_value(doctype, "name", fieldname)
+		if stored in rename_map:
+			frappe.db.set_value(
+				doctype, "name", fieldname, rename_map[stored], update_modified=False
+			)
+
+
+def _sync_page_roles_from_json():
+	"""Ensure each app Page's and Report's `Has Role` rows match its DocType JSON.
+
+	The JSON is the source of truth for which roles may open a page or run a
+	report, but Frappe does not re-sync child rows of an *already existing*
+	document on migrate. A document whose role rows were dropped, or left over
+	from before the role rename, therefore keeps serving the stale set.
+
+	Reports are the sharper edge of this. `DeskViews._build_user_pages_or_reports`
+	treats a page or report with **no** role rows as allowed to everyone
+	(frappe/desk/desk_views.py:229, "pages and reports with no role are allowed"),
+	and `is_item_allowed` gates sidebar visibility on that set. So a report that
+	should be admin-only but lost its role rows does not merely lose access -- it
+	gains it, and shows up in the sidebar of every user. This syncs Reports as
+	well as Pages so both directions are repaired.
+	"""
+	import json
+	import os
+
+	from adx_secure_qr_login.desktop import (
+		AUDIT_REPORT,
+		DASHBOARD_PAGE,
+		MY_QR_PAGE,
+		WEEKLY_REPORT,
+	)
+
+	app_path = frappe.get_app_path("adx_secure_qr_login")
+	targets = (
+		*(("Page", name, "page") for name in (DASHBOARD_PAGE, MY_QR_PAGE)),
+		*(("Report", name, "report") for name in (WEEKLY_REPORT, AUDIT_REPORT)),
+	)
+
+	for parenttype, name, folder in targets:
+		slug = frappe.scrub(name)
+		path = os.path.join(app_path, "secure_qr_login", folder, slug, f"{slug}.json")
+		if not (frappe.db.exists(parenttype, name) and os.path.exists(path)):
+			continue
+
+		with open(path) as f:
+			expected = {r["role"] for r in json.load(f).get("roles") or [] if r.get("role")}
+		current = set(
+			frappe.get_all(
+				"Has Role",
+				filters={"parent": name, "parenttype": parenttype},
+				pluck="role",
+				ignore_permissions=True,
+			)
+		)
+
+		for role in sorted(expected - current):
+			frappe.get_doc(
+				{
+					"doctype": "Has Role",
+					"parent": name,
+					"parenttype": parenttype,
+					"parentfield": "roles",
+					"role": role,
+				}
+			).insert(ignore_permissions=True)
+		for role in sorted(current - expected):
+			row = frappe.db.get_value(
+				"Has Role",
+				{"parent": name, "parenttype": parenttype, "role": role},
+				"name",
+			)
+			if row:
+				frappe.db.delete("Has Role", row)
 
 
 def ensure_desk_navigation():
 	from adx_secure_qr_login.desktop import (
+		apply_sidebar_layout,
 		ensure_audit_link,
 		ensure_audit_analysis_link,
 		ensure_dashboard_link,
 		ensure_devices_link,
 		ensure_my_qr_link,
+		repair_workspace_link_types,
 	)
 
+	# Runs first: a link row with no link_type makes the whole workspace raise
+	# on render, which would mask every repair below.
+	repair_workspace_link_types()
 	ensure_audit_link()
 	ensure_dashboard_link()
 	ensure_devices_link()
 	ensure_my_qr_link()
 	ensure_audit_analysis_link()
+	# Runs last on purpose: the helpers above only append single entries and so
+	# cannot express grouping or order. This pass rewrites the sidebar rows to
+	# the canonical layout, undoing any position they got wrong.
+	apply_sidebar_layout()
 
 
 def before_uninstall():
