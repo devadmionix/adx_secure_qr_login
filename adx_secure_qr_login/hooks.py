@@ -309,6 +309,13 @@ fixtures = [
 
 # ignore_links_on_delete = ["Communication", "ToDo"]
 
+# Completes a QR sign-in server-side when the browser lands on
+# /login?qr=<token>, so a scanned QR goes straight to the desk instead of
+# flashing the login page. A custom page renderer rather than `before_request`:
+# only this call site lets `frappe.Redirect` become a real HTTP redirect.
+# See security/qr_fast_login.py.
+page_renderer = ["adx_secure_qr_login.security.qr_fast_login.QrFastLoginPage"]
+
 # Request Events
 # ----------------
 # before_request = ["adx_secure_qr_login.utils.before_request"]
