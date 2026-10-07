@@ -80,6 +80,13 @@
       "type": "DocType"
     },
     {
+      "color": "Orange",
+      "doc_view": "Report",
+      "label": "QR Login Audit Analysis",
+      "link_to": "QR Login Audit Analysis",
+      "type": "Report"
+    },
+    {
       "color": "Purple",
       "doc_view": "List",
       "label": "Devices & Sessions",
