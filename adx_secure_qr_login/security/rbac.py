@@ -19,12 +19,13 @@ from adx_secure_qr_login.secure_qr_login.constants import (
 	REASON_UNAUTHORIZED,
 	ROLE_ADMIN,
 	ROLE_MANAGER,
+	LEGACY_ROLE_ADMIN,
 )
 
 # Roles that must never be reachable through a QR Manager action. Granting or
 # re-minting credentials for a peer administrator is a privilege-escalation path,
 # so a Manager must escalate to an Admin to touch one of these accounts.
-PRIVILEGED_ROLES = frozenset({"Administrator", "System Manager", ROLE_ADMIN})
+PRIVILEGED_ROLES = frozenset({"Administrator", "System Manager", ROLE_ADMIN, LEGACY_ROLE_ADMIN})
 
 
 def _roles_of(user: str) -> set[str]:

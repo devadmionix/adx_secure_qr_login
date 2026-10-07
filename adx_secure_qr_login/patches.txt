@@ -12,3 +12,4 @@ adx_secure_qr_login.patches.v0_0_5.add_weekly_report_to_workspace
 adx_secure_qr_login.patches.v0_0_6.add_dashboard_page_to_sidebar
 adx_secure_qr_login.patches.v0_0_7.backfill_weekly_report_hour
 adx_secure_qr_login.patches.v0_0_8.backfill_missing_setting_defaults
+adx_secure_qr_login.patches.v0_0_9.grant_page_read_to_desk_user

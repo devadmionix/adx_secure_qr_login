@@ -10,10 +10,10 @@
   "page_name": "qr-security-dashboard",
   "roles": [
     {
-      "role": "QR Admin"
+      "role": "QR Login Admin"
     },
     {
-      "role": "QR Manager"
+      "role": "QR Login Manager"
     },
     {
       "role": "System Manager"

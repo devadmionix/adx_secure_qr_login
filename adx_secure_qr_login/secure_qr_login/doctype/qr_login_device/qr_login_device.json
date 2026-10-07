@@ -137,7 +137,7 @@
    "print": 1,
    "read": 1,
    "report": 1,
-   "role": "QR Admin",
+   "role": "QR Login Admin",
    "write": 1
   },
   {
@@ -147,7 +147,7 @@
    "print": 1,
    "read": 1,
    "report": 1,
-   "role": "QR Manager",
+   "role": "QR Login Manager",
    "write": 1
   },
   {

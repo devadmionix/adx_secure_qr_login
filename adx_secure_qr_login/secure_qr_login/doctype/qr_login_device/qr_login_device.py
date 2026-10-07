@@ -68,3 +68,20 @@ class QRLoginDevice(Document):
 		registry is keyed on sid rather than device, so nothing has to be undone
 		here; the hook exists to make that explicit rather than incidental.
 		"""
+
+# Permission hooks -- registered here so Frappe's permission engine picks them
+# up. The actual logic lives in permissions/device_conditions.py.
+def get_permission_query_conditions(user=None):
+	from adx_secure_qr_login.permissions.device_conditions import (
+		get_permission_query_conditions as _impl,
+	)
+
+	return _impl(user)
+
+
+def has_permission(doc, ptype, user=None):
+	from adx_secure_qr_login.permissions.device_conditions import (
+		has_permission as _impl,
+	)
+
+	return _impl(doc, ptype, user)

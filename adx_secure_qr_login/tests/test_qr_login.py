@@ -264,7 +264,7 @@ class TestQRRbac(FrappeTestCase):
 
 		frappe.set_user("Administrator")
 		mgr = ensure_system_user("qrtest.manager@test.local", "Mgr",
-								 roles=["QR Manager"]).name
+								 roles=["QR Login Manager"]).name
 
 		with self.assertRaises(frappe.PermissionError):
 			rbac.assert_can_manage_target("test", "Administrator", user=mgr)

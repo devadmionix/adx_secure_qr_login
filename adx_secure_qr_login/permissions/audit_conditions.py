@@ -44,7 +44,7 @@ def _visible_users(user: str) -> list[str] | None:
 		pluck="name",
 		limit_page_length=0,
 	)
-	privileged = {"Administrator", "System Manager", "QR Admin"}
+	privileged = {"Administrator", "System Manager", "QR Login Admin"}
 
 	visible = []
 	for name in candidates:

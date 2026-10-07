@@ -115,7 +115,13 @@
       "export": 1,
       "read": 1,
       "report": 1,
-      "role": "QR Admin"
+      "role": "QR Login Admin"
+    },
+    {
+      "export": 1,
+      "read": 1,
+      "report": 1,
+      "role": "QR Login Manager"
     },
     {
       "export": 1,

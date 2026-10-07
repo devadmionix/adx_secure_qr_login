@@ -176,8 +176,8 @@ app switcher.
 Grant roles to staff from **User** → *Roles*:
 
 ```bash
-bench --site <site> add-role "QR Manager" jane@example.com
-bench --site <site> add-role "QR Admin" admin@example.com
+bench --site <site> add-role "QR Login Manager" jane@example.com
+bench --site <site> add-role "QR Login Admin" admin@example.com
 ```
 
 ---

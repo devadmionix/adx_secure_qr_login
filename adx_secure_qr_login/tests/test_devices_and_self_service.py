@@ -63,7 +63,7 @@ class _Base(FrappeTestCase):
 	def setUp(self):
 		frappe.set_user("Administrator")
 		cleanup_test_users(ALL)
-		_make_user(ADMIN, roles=("Stock User", "QR Admin"))
+		_make_user(ADMIN, roles=("Stock User", "QR Login Admin"))
 		_make_user(OWNER)
 		_make_user(OTHER)
 		frappe.db.commit()
@@ -142,7 +142,7 @@ class TestDeviceActions(_Base):
 
 	def test_manager_cannot_trust_other_company_device(self):
 		company_a, company_b = require_companies(2)[:2]
-		_make_user(MANAGER_A, roles=("Stock User", "QR Manager"), company=company_a)
+		_make_user(MANAGER_A, roles=("Stock User", "QR Login Manager"), company=company_a)
 		_make_user(OTHER, company=company_b)
 		# Company User Permissions are what scope a user in ERPNext; the QR layer
 		# reads them. A user with none is treated as unrestricted.

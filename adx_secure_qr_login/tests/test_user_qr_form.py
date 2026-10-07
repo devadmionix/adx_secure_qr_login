@@ -41,7 +41,7 @@ class TestUserQRForm(FrappeTestCase):
 		cleanup_test_users(ALL)
 		_make_user(TARGET)
 		_make_user(PLAIN)
-		_make_user(ADMIN, roles=("Stock User", "QR Admin"))
+		_make_user(ADMIN, roles=("Stock User", "QR Login Admin"))
 
 	def tearDown(self):
 		frappe.set_user("Administrator")

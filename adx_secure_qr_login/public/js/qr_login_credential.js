@@ -7,6 +7,10 @@
 // The image comes from `qr_manage.get_qr_data_uri` / `download_qr_image`,
 // which enforce the same read/self-download rules as the credential itself.
 // This script never touches token material, only the printable PNG/SVG.
+//
+// UI restrictions: admin-only buttons (Regenerate, Revoke, Email) are hidden
+// from normal users. The server-side checks will still deny these actions
+// even if the buttons were shown, but the UI should reflect the user's role.
 
 frappe.ui.form.on("QR Login Credential", {
 	refresh(frm) {
@@ -35,14 +39,23 @@ frappe.ui.form.on("QR Login Credential", {
 			.map((v) => badge(v, status))
 			.join("");
 
+		// Determine which actions the current user may perform.
+		// Normal users (Desk User without QR Login Admin/Manager role) may only
+		// view, download, and print their own credential. Admin buttons are hidden.
+		const isManager = frappe.user_roles.includes("QR Login Admin") ||
+			frappe.user_roles.includes("QR Login Manager");
+		const canDownload = frappe.user_roles.includes("QR Login Admin") ||
+			frappe.user_roles.includes("QR Login Manager") ||
+			frappe.boot.qr_self_download_allowed;
+
 		field.$wrapper.html(`
 		<div class="adx-qr-actions" style="display:flex;flex-wrap:wrap;gap:6px;margin-bottom:10px;">
-			<button type="button" class="btn btn-sm btn-primary" data-adx-action="regenerate">${__("Regenerate")}</button>
-			<button type="button" class="btn btn-sm btn-danger" data-adx-action="revoke">${__("Revoke")}</button>
-			<button type="button" class="btn btn-sm btn-default" data-adx-action="download-svg">${__("Download SVG")}</button>
+			${isManager ? `<button type="button" class="btn btn-sm btn-primary" data-adx-action="regenerate">${__("Regenerate")}</button>
+			<button type="button" class="btn btn-sm btn-danger" data-adx-action="revoke">${__("Revoke")}</button>` : ""}
+			${canDownload ? `<button type="button" class="btn btn-sm btn-default" data-adx-action="download-svg">${__("Download SVG")}</button>
 			<button type="button" class="btn btn-sm btn-default" data-adx-action="download-png">${__("Download PNG")}</button>
-			<button type="button" class="btn btn-sm btn-default" data-adx-action="print">${__("Print Card")}</button>
-			<button type="button" class="btn btn-sm btn-default" data-adx-action="email">${__("Email QR")}</button>
+			<button type="button" class="btn btn-sm btn-default" data-adx-action="print">${__("Print Card")}</button>` : ""}
+			${isManager ? `<button type="button" class="btn btn-sm btn-default" data-adx-action="email">${__("Email QR")}</button>` : ""}
 		</div>
 		<div class="adx-qr-chips" style="display:flex;align-items:center;flex-wrap:wrap;gap:8px;margin-bottom:12px;">
 			<div>${statusChips}</div>

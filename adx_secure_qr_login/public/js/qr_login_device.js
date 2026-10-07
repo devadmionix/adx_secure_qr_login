@@ -10,7 +10,7 @@
 frappe.ui.form.on("QR Login Device", {
 	refresh(frm) {
 		if (frm.is_new()) return;
-		if (!frappe.user.has_role(["QR Admin", "QR Manager"])) return;
+		if (!frappe.user.has_role(["QR Login Admin", "QR Login Manager"])) return;
 
 		const api = "adx_secure_qr_login.api.qr_device";
 		const revoked = !!frm.doc.revoked;

@@ -58,7 +58,7 @@ def _can_access_report(user: str | None = None) -> bool:
 		roles = set(frappe.get_roles(user))
 	except Exception:
 		return False
-	return bool(roles & {"QR Admin", "System Manager"})
+	return bool(roles & {"QR Login Admin", "QR Login Manager", "System Manager"})
 
 
 def assert_can_access_report(action: str, user: str | None = None) -> None:

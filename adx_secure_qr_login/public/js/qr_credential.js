@@ -155,13 +155,24 @@ frappe.ui.form.on("QR Login Credential", {
 		const status = frm.doc.status;
 		const actions = [];
 
+		// Determine which actions the current user may perform.
+		// Normal users (Desk User without QR Login Admin/Manager role) may only
+		// view, download, and print their own credential. Admin buttons are hidden.
+		const isManager = frappe.user_roles.includes("QR Login Admin") ||
+			frappe.user_roles.includes("QR Login Manager");
+		const canDownload = isManager || frappe.boot.qr_self_download_allowed;
+
 		if (status === "Active") {
 			actions.push(
 				`<button class="btn btn-sm btn-default qr-download">${frappe._("Download QR")}</button>`,
-				`<button class="btn btn-sm btn-default qr-print">${frappe._("Print QR")}</button>`,
-				`<button class="btn btn-sm btn-warning qr-regenerate">${frappe._("Regenerate")}</button>`,
-				`<button class="btn btn-sm btn-danger qr-revoke">${frappe._("Revoke")}</button>`
+				`<button class="btn btn-sm btn-default qr-print">${frappe._("Print QR")}</button>`
 			);
+			if (isManager) {
+				actions.push(
+					`<button class="btn btn-sm btn-warning qr-regenerate">${frappe._("Regenerate")}</button>`,
+					`<button class="btn btn-sm btn-danger qr-revoke">${frappe._("Revoke")}</button>`
+				);
+			}
 		} else {
 			// Expired / Revoked / Superseded cards carry no scannable image, so
 			// download and print are hidden rather than offered and failing.
@@ -173,20 +184,22 @@ frappe.ui.form.on("QR Login Credential", {
 			);
 		}
 
-		frm.add_custom_button(
-			frappe._("Download QR"),
-			() => adx.qr_credential.download(frm),
-			"QR"
-		);
-		frm.add_custom_button(frappe._("Print QR"), () => adx.qr_credential.print(frm), "QR");
-		if (status === "Active" || status === "Expired") {
+		if (canDownload) {
+			frm.add_custom_button(
+				frappe._("Download QR"),
+				() => adx.qr_credential.download(frm),
+				"QR"
+			);
+			frm.add_custom_button(frappe._("Print QR"), () => adx.qr_credential.print(frm), "QR");
+		}
+		if (isManager && (status === "Active" || status === "Expired")) {
 			frm.add_custom_button(
 				frappe._("Regenerate"),
 				() => adx.qr_credential.regenerate(frm),
 				"QR"
 			);
 		}
-		if (status !== "Revoked") {
+		if (isManager && status !== "Revoked") {
 			frm.add_custom_button(
 				frappe._("Revoke"),
 				() => adx.qr_credential.revoke(frm),

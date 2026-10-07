@@ -122,9 +122,33 @@ def get_credential_summary(name: str) -> dict:
 
 	Exposed instead of relying on DocType field permissions, because `hidden` on a
 	field is only a UI hint and would still be returned by the REST payload.
+
+	Explicit ownership validation: a normal user (without QR Login Admin or
+	QR Login Manager role) may only access their own credential. This is
+	enforced server-side regardless of how the request arrives (URL, API, etc.).
 	"""
-	if not frappe.has_permission("QR Login Credential", "read", doc=name):
-		frappe.throw(frappe._("Not permitted"), frappe.PermissionError)
+	from adx_secure_qr_login.security import rbac
+
+	# RBAC check: raises PermissionError if not permitted
+	rbac.assert_can_view_credential(name)
 
 	doc = frappe.get_doc("QR Login Credential", name)
 	return doc.as_public_dict()
+
+
+# Permission hooks -- registered here so Frappe's permission engine picks them
+# up. The actual logic lives in permissions/credential_conditions.py.
+def get_permission_query_conditions(user=None):
+	from adx_secure_qr_login.permissions.credential_conditions import (
+		get_permission_query_conditions as _impl,
+	)
+
+	return _impl(user)
+
+
+def has_permission(doc, ptype, user=None):
+	from adx_secure_qr_login.permissions.credential_conditions import (
+		has_permission as _impl,
+	)
+
+	return _impl(doc, ptype, user)

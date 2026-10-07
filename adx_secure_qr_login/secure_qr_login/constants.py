@@ -10,9 +10,15 @@ refer to the same literals.
 import frappe
 
 # ---------------------------------------------------------------------- roles
-ROLE_ADMIN = "QR Admin"
-ROLE_MANAGER = "QR Manager"
+ROLE_ADMIN = "QR Login Admin"
+ROLE_MANAGER = "QR Login Manager"
 QR_ROLES = (ROLE_ADMIN, ROLE_MANAGER)
+
+# Legacy role names kept for migration purposes. Sites installed before the
+# rename to "QR Login Admin" / "QR Login Manager" will have the old names in
+# their Role records; the after_migrate hook renames them.
+LEGACY_ROLE_ADMIN = "QR Admin"
+LEGACY_ROLE_MANAGER = "QR Manager"
 
 # Frappe v16 grants every desk user the role "Desk User", NOT a role named
 # "System User":

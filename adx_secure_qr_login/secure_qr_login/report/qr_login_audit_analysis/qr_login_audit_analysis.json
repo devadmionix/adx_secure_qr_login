@@ -14,10 +14,10 @@
  "report_type": "Script Report",
  "roles": [
   {
-   "role": "QR Admin"
+   "role": "QR Login Admin"
   },
   {
-   "role": "QR Manager"
+   "role": "QR Login Manager"
   }
  ]
 }

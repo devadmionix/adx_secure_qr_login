@@ -197,8 +197,8 @@ class TestAuditAnalysis(FrappeTestCase):
 			self._run()
 
 	def test_manager_cannot_see_privileged_users_rows(self):
-		_make_user(MANAGER, roles=("Stock User", "QR Manager"))
-		privileged = _make_user(OTHER, roles=("Stock User", "QR Admin"))
+		_make_user(MANAGER, roles=("Stock User", "QR Login Manager"))
+		privileged = _make_user(OTHER, roles=("Stock User", "QR Login Admin"))
 		_audit(EVENT_GENERATED, "2032-03-04 09:00:00", True, privileged, COMPANY)
 		frappe.db.commit()
 
@@ -210,7 +210,7 @@ class TestAuditAnalysis(FrappeTestCase):
 
 	def test_manager_does_not_see_other_company(self):
 		company_a, company_b = require_companies(2)[:2]
-		_make_user(MANAGER, roles=("Stock User", "QR Manager"), company=company_a)
+		_make_user(MANAGER, roles=("Stock User", "QR Login Manager"), company=company_a)
 		user_b = _make_user(OTHER, company=company_b)
 		for who, company in ((MANAGER, company_a), (OTHER, company_b)):
 			frappe.get_doc(

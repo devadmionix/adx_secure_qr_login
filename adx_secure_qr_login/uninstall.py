@@ -11,7 +11,7 @@ def before_uninstall():
 	still reference leaves orphaned assignments. `frappe.delete_doc("Role", ...)`
 	is deliberately not called.
 	"""
-	for role in ("QR Manager", "QR Admin"):
+	for role in ("QR Login Manager", "QR Login Admin", "QR Manager", "QR Admin"):
 		if not frappe.db.exists("Role", role):
 			continue
 		users = frappe.get_all(

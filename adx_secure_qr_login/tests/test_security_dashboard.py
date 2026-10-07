@@ -111,7 +111,7 @@ class TestSecurityDashboard(FrappeTestCase):
 		frappe.set_user("Administrator")
 		self.assertIn("credentials", self._dashboard())
 
-		_make_user("qrtest.dash.manager@test.local", roles=("QR Manager",))
+		_make_user("qrtest.dash.manager@test.local", roles=("QR Login Manager",))
 		frappe.set_user("qrtest.dash.manager@test.local")
 		self.assertIn("credentials", self._dashboard())
 
@@ -194,7 +194,7 @@ class TestSecurityDashboard(FrappeTestCase):
 		doc = frappe.get_doc("Page", "qr-security-dashboard")
 		self.assertEqual(doc.module, "Secure QR Login")
 		roles = {r.role for r in doc.get("roles") or []}
-		self.assertTrue({"QR Admin", "System Manager"} <= roles)
+		self.assertTrue({"QR Login Admin", "System Manager"} <= roles)
 
 	def test_sidebar_links_dashboard(self):
 		items = frappe.get_doc("Workspace Sidebar", "Secure QR Login").get("items")

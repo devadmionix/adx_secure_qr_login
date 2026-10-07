@@ -54,7 +54,7 @@ def execute():
 		chart.flags.ignore_permissions = True
 		chart.insert(ignore_permissions=True)
 
-	for role in ("QR Admin", "QR Manager"):
+	for role in ("QR Login Admin", "QR Login Manager", "QR Admin", "QR Manager"):
 		if frappe.db.exists("Role", role) and not frappe.db.exists(
 			"Has Role", {"parent": CHART_NAME, "parenttype": "Dashboard Chart", "role": role}
 		):
