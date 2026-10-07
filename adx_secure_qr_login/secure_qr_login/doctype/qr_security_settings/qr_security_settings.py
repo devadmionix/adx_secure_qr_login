@@ -22,13 +22,24 @@ class QRSecuritySettings(Document):
 		self.clamp_validity()
 		self.normalise_recipients()
 		self.clamp_lockout()
+		self.clamp_report_hour()
 
+	def clamp_report_hour(self):
+		hour = self.get("weekly_report_hour")
+		self.weekly_report_hour = 8 if hour is None else min(max(int(hour), 0), 23)
+
+	@frappe.whitelist()
 	def send_report_now(self):
 		"""Spec 16 "Manual run: Send Now".
 
-		Bound to the Button of the same name. Reports the *previous* week, the
-		same window the scheduled job uses, so a manual run and an automated one
-		are never comparable across different periods by accident.
+		Bound to the Button of the same name via the field's `options`. Reports the
+		*previous* week, the same window the scheduled job uses, so a manual run and
+		an automated one are never comparable across different periods by accident.
+
+		Whitelisted because `frappe.handler.run_doc_method` refuses any controller
+		method that is not, which is what a `Button` field with `options` calls.
+		`run_doc_method` loads this Single with `check_permission=True`, and the
+		DocType grants only QR Admin, so the button is reachable by QR Admin alone.
 		"""
 		from adx_secure_qr_login.reports.weekly_security_report import send_report_now
 
@@ -52,13 +63,17 @@ class QRSecuritySettings(Document):
 
 		return result
 
+	@frappe.whitelist()
 	def generate_weekly_report(self):
 		"""Feature 8 manual run: persist a report for the previous week.
 
-		Bound to the Button of the same name. Calls the same
-		`security.weekly_report` service as the Monday 00:05 scheduler job, so
+		Bound to the Button of the same name via the field's `options`. Calls the
+		same `security.weekly_report` service as the Monday 00:05 scheduler job, so
 		manual and automatic figures can never diverge. Unlike `send_report_now`
 		(email), this stores a `Weekly Security Report` record for history.
+
+		Whitelisted for the same reason as `send_report_now`, and reachable by QR
+		Admin alone for the same reason.
 		"""
 		from adx_secure_qr_login.security.weekly_report import (
 			generate_weekly_security_report,

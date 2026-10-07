@@ -310,8 +310,11 @@ def generate_weekly_security_report(
 	assert_can_access_report("generate_weekly_security_report")
 
 	if period_start and period_end:
-		frappe.utils.validate_date(period_start)
-		frappe.utils.validate_date(period_end)
+		# `getdate` raises a clean ValidationError on a bad
+		# date string; `_generate` re-parses the same values,
+		# so this is an early check, not a second opinion.
+		frappe.utils.getdate(period_start)
+		frappe.utils.getdate(period_end)
 		start, end = period_start, period_end
 	elif period_start or period_end:
 		frappe.throw(frappe._("Provide both period start and period end, or neither."))

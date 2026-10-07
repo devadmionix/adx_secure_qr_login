@@ -42,6 +42,7 @@
   "section_break_reporting",
   "weekly_report_enabled",
   "weekly_report_day",
+  "weekly_report_hour",
   "weekly_report_timezone",
   "weekly_report_recipient_role",
   "weekly_report_recipients",
@@ -279,8 +280,15 @@
    "options": "Monday\nTuesday\nWednesday\nThursday\nFriday\nSaturday\nSunday"
   },
   {
+   "default": "8",
+   "description": "Hour of the day (0-23) the weekly report is sent.",
+   "fieldname": "weekly_report_hour",
+   "fieldtype": "Int",
+   "label": "Weekly Report Hour"
+  },
+  {
    "default": "Asia/Kolkata",
-   "description": "Timezone the weekly report's 08:00 send time is interpreted in (spec 16).",
+   "description": "Timezone the weekly report's send time is interpreted in (spec 16).",
    "fieldname": "weekly_report_timezone",
    "fieldtype": "Select",
    "label": "Weekly Report Timezone",
@@ -313,12 +321,14 @@
    "depends_on": "eval:doc.weekly_report_enabled",
    "fieldname": "send_report_now",
    "fieldtype": "Button",
-   "label": "Send Weekly Report Now"
+   "label": "Send Weekly Report Now",
+   "options": "send_report_now"
   },
   {
    "fieldname": "generate_weekly_report",
    "fieldtype": "Button",
-   "label": "Generate Weekly Security Report"
+   "label": "Generate Weekly Security Report",
+   "options": "generate_weekly_report"
   }
  ],
  "index_web_pages_for_search": 1,

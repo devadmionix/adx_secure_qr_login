@@ -55,6 +55,7 @@ web_include_js = "/assets/adx_secure_qr_login/js/qr_login_scan.js"
 # include js in doctype views
 doctype_js = {
 	"QR Login Credential": "public/js/qr_login_credential.js",
+	"QR Security Settings": "public/js/qr_security_settings.js",
 }
 # doctype_list_js = {"doctype" : "public/js/doctype_list.js"}
 # doctype_tree_js = {"doctype" : "public/js/doctype_tree.js"}
@@ -220,8 +221,10 @@ scheduler_events = {
 		"5 0 * * 1": [
 			"adx_secure_qr_login.security.weekly_report.generate_for_previous_week",
 		],
-		"0 8 * * 1": [
-			"adx_secure_qr_login.reports.weekly_security_report.send_weekly_report",
+		# Hourly tick: the send day, hour and timezone are configurable in
+		# QR Security Settings, so the job itself decides whether it is due.
+		"0 * * * *": [
+			"adx_secure_qr_login.reports.weekly_security_report.send_scheduled_weekly_report",
 		],
 		"7 */2 * * *": [
 			"adx_secure_qr_login.tasks.refresh_expiry_status",
