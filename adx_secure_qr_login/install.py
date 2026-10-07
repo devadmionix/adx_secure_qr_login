@@ -10,11 +10,38 @@ from adx_secure_qr_login.secure_qr_login.constants import ROLE_ADMIN, ROLE_MANAG
 ROLES = (ROLE_MANAGER, ROLE_ADMIN)
 
 
+def before_install():
+	"""No pre-install work is required.
+
+	Roles are created in `after_install` alongside the settings single so a
+	failure part-way through leaves no half-created role set.
+	"""
+
+
 def after_install():
 	create_roles()
 	seed_settings()
 	add_roles_to_administrator()
+	ensure_desk_navigation()
 	frappe.db.commit()
+
+
+def after_migrate():
+	"""Re-assert desk navigation after every migrate.
+
+	`bench migrate` regenerates `Workspace Sidebar` from the module, which drops
+	anything a one-shot patch added. Without this the QR Security Dashboard
+	shortcut silently disappears from the sidebar on an upgraded site, leaving it
+	reachable only by URL. The helper is idempotent, so calling it on every
+	migrate is safe.
+	"""
+	ensure_desk_navigation()
+
+
+def ensure_desk_navigation():
+	from adx_secure_qr_login.desktop import ensure_dashboard_link
+
+	ensure_dashboard_link()
 
 
 def before_uninstall():

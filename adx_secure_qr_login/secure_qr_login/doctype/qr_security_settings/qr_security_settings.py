@@ -21,6 +21,7 @@ class QRSecuritySettings(Document):
 		self.record_security_changes()
 		self.clamp_validity()
 		self.normalise_recipients()
+		self.clamp_lockout()
 
 	def send_report_now(self):
 		"""Spec 16 "Manual run: Send Now".
@@ -128,6 +129,7 @@ class QRSecuritySettings(Document):
 			"rate_limit_attempts",
 			"rate_limit_window_seconds",
 			"max_failed_attempts_per_credential",
+			"lockout_minutes",
 			"require_2fa_on_qr_login",
 			"audit_logging_enabled",
 			"manager_company_scope_enabled",
@@ -136,6 +138,13 @@ class QRSecuritySettings(Document):
 			"weekly_report_enabled",
 			"weekly_report_recipient_role",
 			"audit_retention_days",
+			"replay_policy",
+			"replay_window_seconds",
+			"ip_rate_limit_per_hour",
+			"max_concurrent_sessions",
+			"device_tracking",
+			"device_verification",
+			"revoke_sessions_on_revoke",
 		)
 
 		# QR Security Settings is a Single: its values live in `tabSingles`, not
@@ -177,6 +186,41 @@ class QRSecuritySettings(Document):
 
 		default = self.get("default_validity_days") or DEFAULT_VALIDITY_DAYS
 		self.default_validity_days = min(max(default, 1), maximum)
+
+	def clamp_lockout(self):
+		"""Keep the security-control settings internally consistent.
+
+		Also self-heals fields that a site may have as NULL/0 simply because the
+		field was added to an existing Single by `migrate` -- a DocType `default`
+		only applies when the row is created, not when the column appears later.
+		An empty `device_verification` would otherwise silently disable device
+		checks, and `ip_rate_limit_per_hour = 0` would disable the IP brake.
+		"""
+		# At least one attempt must be allowed for the limiter to mean anything.
+		if (self.get("max_failed_attempts_per_credential") or 0) < 1:
+			self.max_failed_attempts_per_credential = 5
+
+		if (self.get("lockout_minutes") or 0) < 1:
+			self.lockout_minutes = 15
+
+		if (self.get("replay_window_seconds") or 0) < 1:
+			self.replay_window_seconds = 60
+
+		# 0 would mean "no IP limiting at all", which is not a safe reading of an
+		# unset field. Use it only for max_concurrent_sessions, where 0 is the
+		# documented "unlimited" value.
+		if (self.get("ip_rate_limit_per_hour") or 0) < 1:
+			self.ip_rate_limit_per_hour = 30
+
+		if (self.get("max_concurrent_sessions") or 0) < 0:
+			self.max_concurrent_sessions = 0
+
+		# A Select left empty (same migrate artefact) must not disable the check.
+		if self.get("device_verification") not in ("log_only", "require_trusted"):
+			self.device_verification = "log_only"
+
+		if self.get("replay_policy") not in ("single_use", "window", "disabled"):
+			self.replay_policy = "single_use"
 
 	def normalise_recipients(self):
 		if not self.weekly_report_recipients:

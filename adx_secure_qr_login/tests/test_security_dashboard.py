@@ -17,10 +17,10 @@ from adx_secure_qr_login.secure_qr_login.constants import (
 	EVENT_LOGIN_SUCCESS,
 	REASON_OK,
 )
-from adx_secure_qr_login.tests import cleanup_test_users
+from adx_secure_qr_login.tests import cleanup_test_users, require_companies
 
-COMPANY_A = "Admionix"
-COMPANY_B = "Admionix-2"
+# Discovered from the site, not hardcoded -- see `require_companies`.
+COMPANY_A, COMPANY_B = (require_companies(2) + [None, None])[:2]
 PERIOD_START = "2031-01-06"
 PERIOD_END = "2031-01-12"
 

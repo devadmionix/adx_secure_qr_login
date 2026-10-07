@@ -12,9 +12,10 @@ from frappe.tests.utils import FrappeTestCase
 
 from adx_secure_qr_login.api import qr_self_service
 from adx_secure_qr_login.secure_qr_login.constants import EVENT_GENERATED
-from adx_secure_qr_login.tests import cleanup_test_users
+from adx_secure_qr_login.tests import cleanup_test_users, require_companies
 
-COMPANY_A = "Admionix"
+# Discovered from the site, not hardcoded -- see `require_companies`.
+COMPANY_A = require_companies(1)[0]
 
 
 def _make_user(email):
@@ -158,4 +159,11 @@ class TestQRSelfService(FrappeTestCase):
 			)
 
 	def test_availability_flag(self):
-		self.assertTrue(qr_self_service.self_service_is_available()["available"])
+		# Self-service generation ships disabled by default (it trades enumeration
+		# resistance for convenience), so the suite turns it on explicitly rather
+		# than assuming the production default.
+		frappe.db.set_single_value("QR Security Settings", "allow_self_service_qr", 1)
+		try:
+			self.assertTrue(qr_self_service.self_service_is_available()["available"])
+		finally:
+			frappe.db.set_single_value("QR Security Settings", "allow_self_service_qr", 0)

@@ -29,6 +29,14 @@
   "rate_limit_attempts",
   "rate_limit_window_seconds",
   "max_failed_attempts_per_credential",
+  "lockout_minutes",
+  "replay_policy",
+  "replay_window_seconds",
+  "ip_rate_limit_per_hour",
+  "max_concurrent_sessions",
+  "device_tracking",
+  "device_verification",
+  "revoke_sessions_on_revoke",
   "column_break_rate_limit",
   "require_2fa_on_qr_login",
   "section_break_reporting",
@@ -182,6 +190,64 @@
    "fieldname": "max_failed_attempts_per_credential",
    "fieldtype": "Int",
    "label": "Max Failures Per Credential"
+  },
+  {
+   "fieldname": "lockout_minutes",
+   "fieldtype": "Int",
+   "default": "15",
+   "label": "Lockout Duration (Minutes)",
+   "description": "How long a credential remains locked after too many failed attempts."
+  },
+  {
+   "fieldname": "replay_policy",
+   "fieldtype": "Select",
+   "default": "single_use",
+   "label": "Replay Protection Policy",
+   "options": "single_use\nwindow\ndisabled",
+   "description": "Controls how a QR credential can be reused. single_use: credential works once. window:credential works within a time window. disabled:no replay protection."
+  },
+  {
+   "fieldname": "replay_window_seconds",
+   "fieldtype": "Int",
+   "default": "60",
+   "label": "Replay Window (Seconds)",
+   "description": "Time window in seconds during which a QR credential can be reused when replay_policy is set to window."
+  },
+  {
+   "fieldname": "ip_rate_limit_per_hour",
+   "fieldtype": "Int",
+   "default": "30",
+   "label": "IP Rate Limit Per Hour",
+   "description": "Maximum QR login attempts per IP address per hour."
+  },
+  {
+   "fieldname": "max_concurrent_sessions",
+   "fieldtype": "Int",
+   "default": "0",
+   "label": "Max Concurrent QR Sessions",
+   "description": "Maximum number of concurrent QR sessions per user. 0 means unlimited."
+  },
+  {
+   "fieldname": "device_tracking",
+   "fieldtype": "Check",
+   "default": "1",
+   "label": "Enable Device Tracking",
+   "description": "Track devices used for QR login."
+  },
+  {
+   "fieldname": "device_verification",
+   "fieldtype": "Select",
+   "default": "log_only",
+   "label": "Device Verification",
+   "options": "log_only\nrequire_trusted",
+   "description": "log_only: log device info only. require_trusted: require trusted device for login."
+  },
+  {
+   "fieldname": "revoke_sessions_on_revoke",
+   "fieldtype": "Check",
+   "default": "1",
+   "label": "Revoke Sessions On Credential Revoke",
+   "description": "Automatically revoke all active sessions when a credential is revoked."
   },
   {
    "fieldname": "column_break_rate_limit",

@@ -19,10 +19,12 @@ from adx_secure_qr_login.secure_qr_login.constants import (
 	REASON_INACTIVE_USER,
 	REASON_REVOKED_CREDENTIAL,
 )
-from adx_secure_qr_login.tests import cleanup_test_users
+from adx_secure_qr_login.tests import cleanup_test_users, require_companies
 
-COMPANY_A = "Admionix"
-COMPANY_B = "Admionix-2"
+# Companies are read from the site under test rather than hardcoded: a suite
+# that assumes a company name only present on one developer database errors out
+# on every other site before reaching a single assertion.
+COMPANY_A, COMPANY_B = (require_companies(2) + [None, None])[:2]
 
 
 def _make_user(email, roles=("Stock User",)):
@@ -174,6 +176,8 @@ class TestUserCompanyGate(FrappeTestCase):
 
 	def test_company_a_user_denied_company_b_by_framework(self):
 		"""Isolation comes from ERPNext User Permissions, not from our field."""
+		if not COMPANY_B:
+			self.skipTest("needs a second transacting company on this site")
 		frappe.get_doc(
 			{
 				"doctype": "User Permission",

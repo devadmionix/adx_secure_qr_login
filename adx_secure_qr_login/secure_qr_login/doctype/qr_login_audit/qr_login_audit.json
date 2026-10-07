@@ -32,7 +32,7 @@
    "in_list_view": 1,
    "in_standard_filter": 1,
    "label": "Event",
-   "options": "QR Login Success\nQR Generated\nQR Downloaded\nQR Regenerated\nQR Revoked\nQR Expired\nInvalid Credential\nExpired Credential\nRevoked Credential\nInactive User\nUser Disabled\nRate Limited\nSession Revoked\nSecurity Setting Changed\nUnauthorized QR Management\nSecurity Validation Failed",
+   "options": "QR Login Success\nQR Generated\nQR Downloaded\nQR Regenerated\nQR Revoked\nQR Expired\nInvalid Credential\nExpired Credential\nRevoked Credential\nInactive User\nUser Disabled\nRate Limited\nSession Revoked\nSecurity Setting Changed\nUnauthorized QR Management\nSecurity Validation Failed\nDevice Revoked\nDevice Registered",
    "reqd": 1,
    "search_index": 1
   },

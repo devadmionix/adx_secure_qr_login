@@ -25,14 +25,17 @@ import hashlib
 
 import frappe
 
-from adx_secure_qr_login.security import session_guard, validation
+from adx_secure_qr_login.security import devices, session_guard, validation
 from adx_secure_qr_login.secure_qr_login.constants import (
 	EVENT_LOGIN_SUCCESS,
 	EVENT_RATE_LIMITED,
 	EVENT_SECURITY_VALIDATION_FAILED,
 	GENERIC_LOGIN_FAILURE_MESSAGE,
+	REASON_CONCURRENT_SESSION,
+	REASON_LOCKED,
 	REASON_OK,
 	REASON_RATE_LIMITED,
+	REASON_REPLAY_DETECTED,
 )
 from adx_secure_qr_login.secure_qr_login.doctype.qr_login_audit.qr_login_audit import (
 	detect_company,
@@ -82,7 +85,7 @@ def _transport_is_secure(settings) -> bool:
 
 
 def enforce_rate_limits(token: str | None) -> None:
-	"""Two independent limits, both driven live by QR Security Settings.
+	"""Independent limits, all driven live by QR Security Settings.
 
 	Deliberately implemented here rather than with Frappe's `@rate_limit`
 	decorator. That decorator is unsuitable for this endpoint for two reasons:
@@ -96,12 +99,18 @@ def enforce_rate_limits(token: str | None) -> None:
 
 	Neither is a reason to patch core; both are reasons to keep the logic local.
 
-	* IP-only, short window  -- stops a broad sweep from one host.
-	* IP + submitted token   -- stops hammering one specific credential.
+	Three scopes, because they defend against different things and an attacker
+	can only be stopped at the scope they cannot trivially change:
+
+	* IP, short window          -- stops a broad sweep from one host
+	* IP + submitted token      -- stops hammering one specific credential
+	* IP, one hour              -- stops a patient low-and-slow sweep that stays
+	                               under the short window all day
 	"""
 	settings = get_settings()
 	limit = settings.rate_limit_attempts or 10
 	window = settings.rate_limit_window_seconds or 300
+	hourly_limit = settings.ip_rate_limit_per_hour or 30
 
 	ip = getattr(frappe.local, "request_ip", None) or "0.0.0.0"
 
@@ -112,6 +121,11 @@ def enforce_rate_limits(token: str | None) -> None:
 	_scoped_rate_limit(f"qr_exchange:ip:{ip}", limit, window)
 	if token:
 		_scoped_rate_limit(f"qr_exchange:tok:{ip}:{token_key}", limit, window)
+
+	# The hourly scope is checked only when it is meaningfully stricter than the
+	# short window, otherwise it would deny a legitimate burst.
+	if hourly_limit > limit:
+		_scoped_rate_limit(f"qr_exchange:ip_hour:{ip}", hourly_limit, 3600)
 
 
 def _scoped_rate_limit(key: str, limit: int, window: int) -> None:
@@ -174,8 +188,18 @@ def qr_exchange(qr_token: str = None, otp: str = None, tmp_id: str = None) -> di
 	try:
 		credential = validation.resolve_credential(qr_token)
 	except validation.CredentialRejected as rejected:
+		# Two independent counters, deliberately kept separate:
+		#
+		#   * `note_failure` (redis, short window) throttles one credential fast.
+		#   * `_register_credential_failure` (the credential row) is the durable
+		#     counter that survives a cache flush and drives the lockout.
+		#
+		# Only the second one is allowed to move when the credential was actually
+		# identified. A token that matches nothing must never increment a counter,
+		# or guessing garbage would let anyone lock any employee out on purpose.
 		if rejected.credential:
 			validation.note_failure(rejected.credential)
+			validation.register_credential_failure(rejected.credential)
 		log_event(
 			rejected.event,
 			user=rejected.user,
@@ -240,6 +264,18 @@ def qr_exchange(qr_token: str = None, otp: str = None, tmp_id: str = None) -> di
 				return _failed(frappe._("That verification code was not accepted. Please try again."))
 
 	# ----------------------------------------------------- create the session
+	# Check concurrent session limit before creating a new session.
+	if not session_guard.check_concurrent_sessions(user):
+		log_event(
+			EVENT_RATE_LIMITED,
+			user=user,
+			credential=credential,
+			success=False,
+			reason_code=REASON_RATE_LIMITED,
+			details={"reason": "concurrent_session_limit"},
+		)
+		return _failed(GENERIC_LOGIN_FAILURE_MESSAGE)
+
 	# Shared-terminal hygiene: the previous occupant's session is destroyed
 	# before the new one exists, not merely overwritten by the cookie.
 	if settings.destroy_prior_session:
@@ -247,6 +283,12 @@ def qr_exchange(qr_token: str = None, otp: str = None, tmp_id: str = None) -> di
 
 	frappe.local.login_manager.login_as(user)
 	validation.record_success(credential)
+	# Register so `max_concurrent_sessions` counts QR logins only.
+	session_guard.register_qr_session(user, frappe.session.sid)
+
+	# Track device if enabled
+	if settings.device_tracking:
+		_track_device(user, credential)
 
 	log_event(
 		EVENT_LOGIN_SUCCESS,
@@ -289,6 +331,16 @@ def _notify_use(user: str, doc) -> None:
 		)
 	except Exception:
 		frappe.log_error(title="QR use notification failed", message=frappe.get_traceback())
+
+
+def _track_device(user: str, credential: str) -> None:
+	"""Record the device behind this successful QR login.
+
+	Delegates to `security.devices`, which owns device identification and the
+	best-effort-write policy. Here it stays a thin call so the authentication
+	path has no device logic of its own.
+	"""
+	devices.track_login(user)
 
 
 @frappe.whitelist(allow_guest=True, methods=["GET"])

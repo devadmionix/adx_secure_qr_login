@@ -13,9 +13,9 @@ Run with:
 import frappe
 from frappe.tests.utils import FrappeTestCase
 
-from adx_secure_qr_login.tests import cleanup_test_users
+from adx_secure_qr_login.tests import cleanup_test_users, site_companies
 
-COMPANY = "Admionix"
+COMPANY = (site_companies() or [None])[0]
 EMAIL = "qrtest.f3@test.local"
 
 
@@ -134,9 +134,10 @@ class TestFeature3PermissionsEqual(FrappeTestCase):
 	# 5. User permission restriction continues to apply after the session
 	def test_user_permission_company_restriction_applies(self):
 		frappe.set_user("Administrator")
-		other = "Admionix-2" if frappe.db.exists("Company", "Admionix-2") else None
+		others = [c for c in site_companies() if c != COMPANY]
+		other = others[0] if others else None
 		if not other:
-			self.skipTest("needs two companies")
+			self.skipTest("needs a second transacting company on this site")
 		frappe.get_doc(
 			{
 				"doctype": "User Permission",

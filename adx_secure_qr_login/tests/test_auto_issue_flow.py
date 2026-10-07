@@ -14,9 +14,9 @@ from frappe.tests.utils import FrappeTestCase
 
 from adx_secure_qr_login.api import qr_manage
 from adx_secure_qr_login.secure_qr_login.constants import CREDENTIAL_STATUS_ACTIVE
-from adx_secure_qr_login.tests import cleanup_test_users
+from adx_secure_qr_login.tests import cleanup_test_users, require_companies
 
-COMPANY = "Admionix"
+COMPANY = require_companies(1)[0]
 
 
 def _create_user(email, **overrides):

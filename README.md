@@ -200,6 +200,14 @@ bench --site <site> add-role "QR Admin" admin@example.com
 | `rate_limit_attempts` | 10 | Attempts per window, per IP and per token |
 | `rate_limit_window_seconds` | 300 | Window length |
 | `max_failed_attempts_per_credential` | 5 | Locks one credential after N failures |
+| `lockout_minutes` | 15 | How long a locked credential stays locked |
+| `replay_policy` | single_use | `single_use`, `window` or `disabled`, see below |
+| `replay_window_seconds` | 60 | Reuse window when `replay_policy` is `window` |
+| `ip_rate_limit_per_hour` | 30 | Slow-sweep brake: attempts per IP per hour |
+| `max_concurrent_sessions` | 0 | Concurrent **QR** sessions per user; 0 = unlimited |
+| `device_tracking` | 1 | Record the device behind each successful scan |
+| `device_verification` | log_only | `log_only` or `require_trusted`, see below |
+| `revoke_sessions_on_revoke` | 1 | Terminate live sessions when a credential is revoked |
 | `require_2fa_on_qr_login` | 1 | Still require TOTP for users who have 2FA |
 | `require_https` | 1 | Refuse QR login over cleartext HTTP, see below |
 | `allow_self_download` | 1 | Whether a plain user may re-download their own QR image |
@@ -210,6 +218,79 @@ bench --site <site> add-role "QR Admin" admin@example.com
 | `weekly_report_timezone` | Asia/Kolkata | Timezone the send time is interpreted in |
 | `weekly_report_recipient_role` | QR Admin | Role whose members receive the report |
 | `audit_retention_days` | 365 | Audit rows older than this are purged daily |
+
+Two Custom Fields are also shipped on **User**, both synced on migrate:
+
+| Field | Default | Meaning |
+|---|---|---|
+| `company` | — | Company a QR login is bound to (the QR authentication gate) |
+| `qr_login_enabled` | 1 | Per-user switch: uncheck to block QR login for that account |
+
+`qr_login_enabled` blocks the QR *authentication path only*. Password login and
+every other ERPNext permission are untouched.
+
+### Replay protection
+
+A QR credential is a bearer token, so "can this code be presented twice" is a
+real question. `replay_policy` decides the answer:
+
+- `single_use` — the credential authenticates once. A short grace window (5s)
+  absorbs the mobile double-request (link preview prefetch, then the real page
+  load), which is one login attempt twice rather than a replay.
+- `window` — the credential may be reused within `replay_window_seconds`, which
+  suits a shared kiosk where the same printed card is scanned repeatedly.
+- `disabled` — no replay check. Only sensible where a credential is
+  continuously re-issued and the audit trail is the control.
+
+The check uses `last_used`, which is written server-side on every success.
+
+### Failed-attempt lockout
+
+`failed_attempts` and `locked_until` live on **QR Login Credential**, so the
+lockout survives a cache flush (unlike the Redis counter, which is a fast
+short-window brake). After `max_failed_attempts_per_credential` rejections the
+credential is unusable for `lockout_minutes`; when the window elapses it
+recovers automatically. A successful scan resets the counter.
+
+Two deliberate properties:
+
+- An already-locked credential is **not** re-locked. Presenting a locked code
+  does not push `locked_until` further out, so an attacker cannot keep an
+  already-brute-forced employee locked indefinitely.
+- Only a *recognised* credential moves the counter. A token that matches nothing
+  increments nothing, otherwise anyone could lock any employee out by guessing.
+
+### Devices and concurrent sessions
+
+`device_tracking` records a **QR Login Device** row per user and client
+fingerprint (browser, OS, IP, first/last seen). Devices are company-isolated:
+a Company A administrator cannot list, trust or revoke a Company B device.
+
+`device_verification` decides what a revoked device means:
+
+- `log_only` — revoked is recorded but does not block. Default.
+- `require_trusted` — a *known, revoked* device is refused. A device seen for the
+  first time is still allowed and recorded, otherwise the first login on any new
+  phone would be impossible.
+
+`max_concurrent_sessions` caps simultaneous **QR** sessions per user; `0` (the
+default) is unlimited, so shared-terminal behaviour is unchanged. The count
+covers QR logins only — counting every Frappe session would lock a user out of
+their desk because someone else used a password elsewhere.
+
+### Rate limiting
+
+Three independent scopes, because they defend against different things and an
+attacker can only evade the one they cannot change:
+
+| Scope | Window | Setting |
+|---|---|---|
+| IP | `rate_limit_window_seconds` | `rate_limit_attempts` |
+| IP + submitted token | `rate_limit_window_seconds` | `rate_limit_attempts` |
+| IP | 1 hour | `ip_rate_limit_per_hour` |
+
+The hourly scope only applies when it is stricter than the short window, so it
+cannot deny a legitimate burst. The raw token never appears in a cache key.
 
 ### HTTPS requirement
 

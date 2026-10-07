@@ -68,11 +68,16 @@ def can_view_credential(credential_name: str, user: str | None = None) -> bool:
 	"""Whether `user` may see this credential.
 
 	Owner-scoped for ordinary System Users: a user may always see their own
-	credential, plus any they issued themselves. Managers and admins see all.
+	credential, plus any they issued themselves.
+
+	QR Admin sees everything. A QR **Manager** does *not*: they are scoped to the
+	companies they are permitted to see. Returning True for every manager here
+	would let a Company A manager read, download, revoke or regenerate a Company B
+	credential purely because they hold the QR Manager role.
 	"""
 	user = user or frappe.session.user
 
-	if user == "Administrator" or can_manage_credentials(user):
+	if user == "Administrator" or is_qr_admin(user):
 		return True
 
 	if not frappe.db.exists("QR Login Credential", credential_name):
@@ -82,7 +87,79 @@ def can_view_credential(credential_name: str, user: str | None = None) -> bool:
 		"QR Login Credential", credential_name, ["user", "owner"], as_dict=False
 	) or (None, None)
 
-	return user in (subject, owner)
+	if user in (subject, owner):
+		return True
+
+	if can_manage_credentials(user):
+		# Role is not enough; the subject's company must be inside the manager's
+		# permitted scope. `assert_in_manager_scope` raises (and audits) on
+		# refusal, so a boolean wrapper is needed here.
+		return _subject_in_manager_scope(subject, user)
+
+	return False
+
+
+def _subject_in_manager_scope(subject: str | None, actor: str) -> bool:
+	"""Boolean form of `assert_in_manager_scope` (no raise, no audit).
+
+	Kept next to the raising version deliberately so the two cannot drift: the
+	document-level `has_permission` hook needs a bool, the API endpoints need the
+	throw-and-audit behaviour.
+	"""
+	if not subject:
+		return False
+
+	allowed = manager_companies(actor)
+	if allowed is None:
+		# Company scoping is switched off, or the manager holds no Company User
+		# Permission (which ERPNext itself treats as unrestricted).
+		return True
+
+	subject_companies = _company_permissions(subject)
+	if not subject_companies:
+		return True
+
+	return bool(subject_companies & allowed)
+
+
+def _company_permissions(user: str) -> set[str]:
+	perms = frappe.get_all(
+		"User Permission",
+		filters={"user": user, "allow": "Company"},
+		fields=["for_value"],
+		limit_page_length=0,
+		ignore_permissions=True,
+	)
+	return {p["for_value"] for p in perms}
+
+
+def assert_can_manage_credential(
+	credential_name: str, action: str, user: str | None = None
+) -> None:
+	"""Raise unless the caller may read *and* administer this credential.
+
+	The single gate for every credential endpoint. It deliberately composes the
+	existing checks rather than adding a fourth rule:
+
+	1. `assert_can_view_credential` -- row-level visibility (subject/issuer/company)
+	2. `assert_can_manage_credentials` -- the caller holds a QR role at all
+	3. `assert_in_manager_scope`  -- the subject's company is inside a manager's
+	   permitted scope, audited on refusal
+
+	Steps 1 and 2 alone are not sufficient: a QR Manager passes both for any
+	credential in the database, which is what let a Company A manager revoke a
+	Company B credential.
+	"""
+	actor = user or frappe.session.user
+
+	assert_can_view_credential(credential_name, actor)
+	assert_can_manage_credentials(action, actor)
+
+	if not can_manage_credentials(actor) or is_qr_admin(actor):
+		return
+
+	subject = frappe.db.get_value("QR Login Credential", credential_name, "user")
+	assert_in_manager_scope(subject, actor)
 
 
 def assert_can_manage_credentials(action: str, user: str | None = None) -> None:
@@ -165,17 +242,20 @@ def assert_can_view_credential(credential_name: str, user: str | None = None) ->
 
 
 def can_view_user(user: str, actor: str | None = None) -> bool:
-	"""Whether `actor` may enumerate a single user's credentials.
+	"""Whether `actor` may enumerate a single user's credentials or devices.
 
-	An ordinary System User may only ever enumerate themselves. Managers and admins
-	may enumerate anyone -- a Manager only within the company scope they hold,
-	unless `manager_company_scope_enabled` is off.
+	An ordinary System User may only ever enumerate themselves. QR Admin may
+	enumerate anyone. A QR Manager is company-scoped: without this check a
+	Company A manager could pass any Company B user id to `list_user_credentials`
+	and read their whole credential history.
 	"""
 	actor = actor or frappe.session.user
 	if actor == user:
 		return True
-	if actor == "Administrator" or can_manage_credentials(actor):
+	if actor == "Administrator" or is_qr_admin(actor):
 		return True
+	if can_manage_credentials(actor):
+		return _subject_in_manager_scope(user, actor)
 	return False
 
 
@@ -202,18 +282,11 @@ def manager_companies(user: str | None = None) -> set[str] | None:
 	except Exception:
 		return None
 
-	perms = frappe.get_all(
-		"User Permission",
-		filters={"user": user, "allow": "Company"},
-		fields=["for_value"],
-		limit_page_length=0,
-		ignore_permissions=True,
-	)
-
+	perms = _company_permissions(user)
 	if not perms:
 		return None
 
-	return {p["for_value"] for p in perms}
+	return perms
 
 
 def assert_in_manager_scope(target_user: str, actor: str | None = None) -> None:
@@ -226,34 +299,75 @@ def assert_in_manager_scope(target_user: str, actor: str | None = None) -> None:
 	if not can_manage_credentials(actor):
 		return
 
-	allowed = manager_companies(actor)
-	if allowed is None:
-		return
-
-	target_companies = set()
-	# A user with no User Permission on Company can see every company, so treat
-	# them as unrestricted rather than excluding them by accident.
-	perms = frappe.get_all(
-		"User Permission",
-		filters={"user": target_user, "allow": "Company"},
-		fields=["for_value"],
-		limit_page_length=0,
-		ignore_permissions=True,
-	)
-
-	if not perms:
-		return
-
-	target_companies = {p["for_value"] for p in perms}
-
-	if not (target_companies & allowed):
-		_deny("manager_scope", actor, detail=f"target_outside_company_scope")
+	if not _subject_in_manager_scope(target_user, actor):
+		_deny("manager_scope", actor, detail="target_outside_company_scope")
 
 
 def assert_can_view_user(user: str, actor: str | None = None) -> None:
 	if can_view_user(user, actor):
 		return
 	_deny("list_user_credentials", actor or frappe.session.user, detail=f"target_user={user}")
+
+
+def can_view_device(device_name: str, user: str | None = None) -> bool:
+	"""Whether `user` may see this device.
+
+	Owner-scoped for ordinary System Users. QR Admin sees everything; a QR
+	Manager is limited to devices belonging to users in their permitted
+	companies, so a Company A administrator cannot manage Company B devices.
+	"""
+	user = user or frappe.session.user
+
+	if user == "Administrator" or is_qr_admin(user):
+		return True
+
+	if not frappe.db.exists("QR Login Device", device_name):
+		return False
+
+	subject = frappe.db.get_value("QR Login Device", device_name, "user")
+	if user == subject:
+		return True
+
+	if can_manage_credentials(user):
+		return _subject_in_manager_scope(subject, user)
+
+	return False
+
+
+def assert_can_view_device(device_name: str, user: str | None = None) -> None:
+	if can_view_device(device_name, user):
+		return
+	frappe.throw(frappe._("Not permitted"), frappe.PermissionError)
+
+
+def assert_can_manage_device(device_name: str, action: str, user: str | None = None) -> None:
+	"""Raise unless the caller may administer this specific device.
+
+	Mirrors `assert_can_manage_credential`: the QR role is necessary but not
+	sufficient, so the device's owner's company must also be in scope.
+	"""
+	actor = user or frappe.session.user
+
+	assert_can_view_device(device_name, actor)
+	if not can_manage_credentials(actor):
+		_deny(action, actor)
+
+	if not is_qr_admin(actor) and actor != "Administrator":
+		subject = frappe.db.get_value("QR Login Device", device_name, "user")
+		if not _subject_in_manager_scope(subject, actor):
+			_deny(action, actor, detail="device_outside_company_scope")
+
+
+def assert_can_manage_devices(user: str | None = None) -> None:
+	"""Raise unless the caller holds a device-management role at all.
+
+	Role-level gate only; per-record company scoping is
+	`assert_can_manage_device`.
+	"""
+	user = user or frappe.session.user
+	if can_manage_credentials(user):
+		return
+	_deny("manage_devices", user)
 
 
 def visible_users_for_manager(actor: str | None = None) -> list[str] | None:

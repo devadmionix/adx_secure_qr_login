@@ -83,11 +83,19 @@ class QRLoginCredential(Document):
 		return self.get(TOKEN_HASH_FIELD)
 
 	def is_usable(self, on_date=None) -> bool:
+		from adx_secure_qr_login.security.dates import is_future
+
 		if self.status != CREDENTIAL_STATUS_ACTIVE:
 			return False
 		if not self.expires_on:
 			return False
-		return frappe.utils.getdate(self.expires_on) >= (on_date or frappe.utils.getdate())
+		if frappe.utils.getdate(self.expires_on) < (on_date or frappe.utils.getdate()):
+			return False
+		# A live lockout makes the credential unusable regardless of its other
+		# fields. `is_future` normalises the value, which may arrive as a string.
+		if is_future(self.locked_until):
+			return False
+		return True
 
 	def as_public_dict(self) -> dict:
 		"""Shape safe to send to a client or write into an audit row."""
@@ -103,6 +111,8 @@ class QRLoginCredential(Document):
 			"last_used": self.last_used,
 			"use_count": self.use_count,
 			"device_label": self.device_label,
+			"failed_attempts": self.failed_attempts,
+			"locked_until": self.locked_until,
 		}
 
 

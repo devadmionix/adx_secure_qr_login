@@ -97,8 +97,11 @@ doctype_js = {
 # Installation
 # ------------
 
-# before_install = "adx_secure_qr_login.install.before_install"
-# after_install = "adx_secure_qr_login.install.after_install"
+before_install = "adx_secure_qr_login.install.before_install"
+after_install = "adx_secure_qr_login.install.after_install"
+# `bench migrate` regenerates the desk sidebar from the module, which drops the
+# dashboard shortcut a patch added once. Re-assert navigation on every migrate.
+after_migrate = "adx_secure_qr_login.install.after_migrate"
 
 # Uninstallation
 # ------------
@@ -157,6 +160,8 @@ permission_query_conditions = {
 	"QR Login Audit": "adx_secure_qr_login.permissions.audit_conditions.get_permission_query_conditions",
 	# Weekly aggregates are admin-only. See permissions/weekly_report_conditions.py.
 	"Weekly Security Report": "adx_secure_qr_login.permissions.weekly_report_conditions.get_permission_query_conditions",
+	# Device management respects company isolation.
+	"QR Login Device": "adx_secure_qr_login.permissions.device_conditions.get_permission_query_conditions",
 }
 
 has_permission = {
@@ -166,6 +171,8 @@ has_permission = {
 	# Company-isolate the core User list/link field at the same backend level,
 	# otherwise a Company A user can see Company B users.
 	"User": "adx_secure_qr_login.permissions.user_conditions.has_permission",
+	# Device management respects company isolation.
+	"QR Login Device": "adx_secure_qr_login.permissions.device_conditions.has_permission",
 }
 
 # Document Events
@@ -230,14 +237,18 @@ scheduler_events = {
 
 # Fixtures
 # --------
-# Ships the `Company` custom field on User (multi-company QR login gate).
+# Ships the two Custom Fields this app owns on User:
+#
+#   * `company`             -- multi-company QR login gate
+#   * `qr_login_enabled`    -- per-user QR login on/off switch
+#
 # A Custom Field never touches Frappe/ERPNext core files; it syncs into any
-# site on migrate. Filtered to this app's field so unrelated site
+# site on migrate. Filtered to this app's fields so unrelated site
 # customizations are never exported.
 fixtures = [
 	{
 		"dt": "Custom Field",
-		"filters": [["name", "=", "User-company"]],
+		"filters": [["name", "in", ["User-company", "User-qr_login_enabled"]]],
 	}
 ]
 

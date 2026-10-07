@@ -191,8 +191,7 @@ def regenerate_credential(
 	device_label: str | None = None,
 ) -> dict:
 	"""Replace a credential. The previous token stops working immediately."""
-	rbac.assert_can_view_credential(credential)
-	rbac.assert_can_manage_credentials("regenerate_credential")
+	rbac.assert_can_manage_credential(credential, "regenerate_credential")
 
 	doc = frappe.get_doc("QR Login Credential", credential)
 
@@ -257,8 +256,7 @@ def regenerate_credential(
 @frappe.whitelist(methods=["POST"])
 def revoke_credential(credential: str, reason: str | None = None) -> dict:
 	"""Revoke a credential permanently and destroy its printable QR."""
-	rbac.assert_can_view_credential(credential)
-	rbac.assert_can_manage_credentials("revoke_credential")
+	rbac.assert_can_manage_credential(credential, "revoke_credential")
 
 	doc = frappe.get_doc("QR Login Credential", credential)
 
@@ -792,8 +790,7 @@ def resend_welcome_email(credential: str) -> dict:
 	this is the only re-sendable representation. Never mints a new
 	credential: the same `credential` stays live.
 	"""
-	rbac.assert_can_view_credential(credential)
-	rbac.assert_can_manage_credentials("resend_welcome_email")
+	rbac.assert_can_manage_credential(credential, "resend_welcome_email")
 
 	doc = frappe.get_doc("QR Login Credential", credential)
 	if doc.status != CREDENTIAL_STATUS_ACTIVE:

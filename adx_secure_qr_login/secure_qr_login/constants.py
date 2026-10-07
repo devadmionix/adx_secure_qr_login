@@ -56,6 +56,8 @@ EVENT_SESSION_REVOKED = "Session Revoked"
 EVENT_SETTING_CHANGED = "Security Setting Changed"
 EVENT_UNAUTHORIZED_MANAGEMENT = "Unauthorized QR Management"
 EVENT_SECURITY_VALIDATION_FAILED = "Security Validation Failed"
+EVENT_DEVICE_REVOKED = "Device Revoked"
+EVENT_DEVICE_REGISTERED = "Device Registered"
 
 # Order must match the `event` Select options in qr_login_audit.json exactly:
 # frappe validates the value on insert.
@@ -76,6 +78,8 @@ EVENTS = (
 	EVENT_SETTING_CHANGED,
 	EVENT_UNAUTHORIZED_MANAGEMENT,
 	EVENT_SECURITY_VALIDATION_FAILED,
+	EVENT_DEVICE_REVOKED,
+	EVENT_DEVICE_REGISTERED,
 )
 
 # ------------------------------------------------------------------- reasons
@@ -91,6 +95,9 @@ REASON_RATE_LIMITED = "RATE_LIMITED"
 REASON_UNAUTHORIZED = "UNAUTHORIZED"
 REASON_SECURITY_VALIDATION_FAILED = "SECURITY_VALIDATION_FAILED"
 REASON_OK = "OK"
+REASON_REPLAY_DETECTED = "REPLAY_DETECTED"
+REASON_LOCKED = "LOCKED"
+REASON_CONCURRENT_SESSION = "CONCURRENT_SESSION"
 
 # Audit events that represent a rejected QR *login attempt*.
 #
