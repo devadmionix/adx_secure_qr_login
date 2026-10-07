@@ -1,39 +1,123 @@
-<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100" width="100" height="100">
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" role="img" aria-label="ADmionix Secure QR Login">
   <defs>
     <linearGradient id="bg" x1="0%" y1="0%" x2="100%" y2="100%">
-      <stop offset="0%" style="stop-color:#1D4ED8"/>
-      <stop offset="100%" style="stop-color:#0891B2"/>
+      <stop offset="0%" stop-color="#E8F7FB"/>
+      <stop offset="55%" stop-color="#BFE9F1"/>
+      <stop offset="100%" stop-color="#7FD2E2"/>
     </linearGradient>
+    <linearGradient id="pill" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#1C7C87"/>
+      <stop offset="100%" stop-color="#0F5F69"/>
+    </linearGradient>
+    <linearGradient id="shield" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#27B3A6"/>
+      <stop offset="100%" stop-color="#0E8A80"/>
+    </linearGradient>
+    <filter id="soft" x="-20%" y="-20%" width="140%" height="140%">
+      <feDropShadow dx="0" dy="5" stdDeviation="9" flood-color="#0B3C4A" flood-opacity="0.16"/>
+    </filter>
+    <clipPath id="frame">
+      <rect x="0" y="0" width="512" height="512" rx="116"/>
+    </clipPath>
   </defs>
-  <rect width="100" height="100" rx="22" fill="url(#bg)"/>
 
-  <!-- QR finder patterns -->
-  <g fill="none" stroke="white" stroke-width="3.5">
-    <rect x="18" y="18" width="22" height="22" rx="3"/>
-    <rect x="60" y="18" width="22" height="22" rx="3"/>
-    <rect x="18" y="60" width="22" height="22" rx="3"/>
-  </g>
-  <g fill="white">
-    <rect x="24" y="24" width="10" height="10" rx="1.5"/>
-    <rect x="66" y="24" width="10" height="10" rx="1.5"/>
-    <rect x="24" y="66" width="10" height="10" rx="1.5"/>
-  </g>
+  <g clip-path="url(#frame)">
+    <rect x="0" y="0" width="512" height="512" fill="url(#bg)"/>
 
-  <!-- data modules -->
-  <g fill="white" opacity="0.9">
-    <rect x="46" y="20" width="6" height="6" rx="1.5"/>
-    <rect x="46" y="32" width="6" height="6" rx="1.5"/>
-    <rect x="56" y="26" width="6" height="6" rx="1.5"/>
-    <rect x="34" y="46" width="6" height="6" rx="1.5"/>
-    <rect x="44" y="56" width="6" height="6" rx="1.5"/>
-  </g>
+    <!-- soft decorative bubbles -->
+    <circle cx="72" cy="52" r="150" fill="#FFFFFF" opacity="0.34"/>
+    <circle cx="470" cy="140" r="112" fill="#FFFFFF" opacity="0.20"/>
+    <circle cx="60" cy="470" r="128" fill="#5FC6D8" opacity="0.22"/>
+    <circle cx="452" cy="500" r="96" fill="#5FC6D8" opacity="0.18"/>
 
-  <!-- lock badge -->
-  <circle cx="64" cy="64" r="18" fill="white"/>
-  <g fill="none" stroke="#0E7490" stroke-width="3" stroke-linecap="round">
-    <path d="M59.5,63 v-3.5 a4.5,4.5 0 0 1 9,0 v3.5"/>
+    <!-- wordmark -->
+    <text x="256" y="104" text-anchor="middle" fill="#123A5C"
+          font-family="'Segoe UI',Inter,system-ui,-apple-system,Helvetica,Arial,sans-serif"
+          font-size="54" font-weight="700" letter-spacing="-0.5">ADmionix</text>
+
+    <!-- connector from robot to QR card -->
+    <g stroke="#3FB6CC" stroke-width="5" stroke-linecap="round" opacity="0.9">
+      <path d="M232 268 h30"/>
+    </g>
+    <circle cx="248" cy="268" r="5" fill="#3FB6CC"/>
+    <circle cx="268" cy="268" r="5" fill="#3FB6CC"/>
+
+    <!-- robot head -->
+    <g filter="url(#soft)">
+      <rect x="74" y="176" width="176" height="176" rx="58" fill="#16324F"/>
+    </g>
+    <!-- robot eyes (happy arcs) -->
+    <g fill="none" stroke="#5FD3E4" stroke-width="13" stroke-linecap="round">
+      <path d="M124 254 q14 -20 28 0"/>
+      <path d="M176 254 q14 -20 28 0"/>
+    </g>
+    <!-- robot smile -->
+    <path d="M126 292 q36 34 72 0" fill="none" stroke="#5FD3E4"
+          stroke-width="13" stroke-linecap="round"/>
+
+    <!-- AD badge -->
+    <circle cx="128" cy="392" r="34" fill="#FFFFFF" filter="url(#soft)"/>
+    <text x="128" y="402" text-anchor="middle" fill="#16324F"
+          font-family="'Segoe UI',Inter,system-ui,-apple-system,Helvetica,Arial,sans-serif"
+          font-size="27" font-weight="700">AD</text>
+
+    <!-- QR card -->
+    <g filter="url(#soft)">
+      <rect x="272" y="152" width="184" height="184" rx="26" fill="#FFFFFF"/>
+    </g>
+    <!-- QR finder patterns -->
+    <g fill="#16324F">
+      <rect x="296" y="176" width="44" height="44" rx="7"/>
+      <rect x="388" y="176" width="44" height="44" rx="7"/>
+      <rect x="296" y="268" width="44" height="44" rx="7"/>
+    </g>
+    <g fill="#FFFFFF">
+      <rect x="306" y="186" width="24" height="24" rx="4"/>
+      <rect x="398" y="186" width="24" height="24" rx="4"/>
+      <rect x="306" y="278" width="24" height="24" rx="4"/>
+    </g>
+    <g fill="#16324F">
+      <rect x="311" y="191" width="14" height="14" rx="2"/>
+      <rect x="403" y="191" width="14" height="14" rx="2"/>
+      <rect x="311" y="283" width="14" height="14" rx="2"/>
+    </g>
+    <!-- QR data modules -->
+    <g fill="#16324F">
+      <rect x="352" y="176" width="12" height="12" rx="2"/>
+      <rect x="372" y="188" width="12" height="12" rx="2"/>
+      <rect x="352" y="200" width="12" height="12" rx="2"/>
+      <rect x="364" y="212" width="12" height="12" rx="2"/>
+      <rect x="352" y="224" width="12" height="12" rx="2"/>
+      <rect x="388" y="232" width="12" height="12" rx="2"/>
+      <rect x="408" y="232" width="12" height="12" rx="2"/>
+      <rect x="428" y="232" width="12" height="12" rx="2"/>
+      <rect x="396" y="252" width="12" height="12" rx="2"/>
+      <rect x="420" y="256" width="12" height="12" rx="2"/>
+      <rect x="352" y="244" width="12" height="12" rx="2"/>
+      <rect x="372" y="264" width="12" height="12" rx="2"/>
+      <rect x="352" y="276" width="12" height="12" rx="2"/>
+      <rect x="352" y="300" width="12" height="12" rx="2"/>
+      <rect x="372" y="300" width="12" height="12" rx="2"/>
+      <rect x="396" y="300" width="12" height="12" rx="2"/>
+      <rect x="420" y="288" width="12" height="12" rx="2"/>
+      <rect x="420" y="308" width="12" height="12" rx="2"/>
+    </g>
+
+    <!-- verified shield -->
+    <g filter="url(#soft)">
+      <path d="M416 96 l52 0 a8 8 0 0 1 8 8 v46 c0 34 -26 62 -60 74 c-34 -12 -60 -40 -60 -74 v-46 a8 8 0 0 1 8 -8 z"
+            fill="url(#shield)"/>
+    </g>
+    <path d="M394 152 l16 17 l30 -34" fill="none" stroke="#FFFFFF"
+          stroke-width="12" stroke-linecap="round" stroke-linejoin="round"/>
+
+    <!-- caption pill -->
+    <rect x="40" y="392" width="432" height="82" rx="41" fill="url(#pill)"/>
+    <text x="256" y="424" text-anchor="middle" fill="#CFF0F5"
+          font-family="'Segoe UI',Inter,system-ui,-apple-system,Helvetica,Arial,sans-serif"
+          font-size="21" font-weight="500" letter-spacing="0.4">Smart · Passwordless</text>
+    <text x="256" y="458" text-anchor="middle" fill="#FFFFFF"
+          font-family="'Segoe UI',Inter,system-ui,-apple-system,Helvetica,Arial,sans-serif"
+          font-size="34" font-weight="700">Secure QR Login</text>
   </g>
-  <rect x="56" y="63" width="16" height="12" rx="2.5" fill="#0E7490"/>
-  <circle cx="64" cy="68" r="1.9" fill="white"/>
-  <rect x="62.8" y="68.5" width="2.4" height="4" rx="1.2" fill="white"/>
 </svg>
