@@ -1,0 +1,111 @@
+{
+  "app": "adx_secure_qr_login",
+  "charts": [],
+  "content": "[\n {\n  \"data\": {\n   \"col\": 12,\n   \"text\": \"<span class=\\\"h4\\\"><b>Credentials</b></span>\"\n  },\n  \"id\": \"qrHeadManage\",\n  \"type\": \"header\"\n },\n{\n  \"data\": {\n   \"col\": 4,\n   \"shortcut_name\": \"QR Login Credential\"\n  },\n  \"id\": \"qrScCred0\",\n  \"type\": \"shortcut\"\n },\n {\n  \"data\": {\n   \"col\": 4,\n   \"shortcut_name\": \"QR Login Audit\"\n  },\n  \"id\": \"qrScAudit0\",\n  \"type\": \"shortcut\"\n },\n {\n  \"data\": {\n   \"col\": 4,\n   \"shortcut_name\": \"Devices & Sessions\"\n  },\n  \"id\": \"qrScDev0\",\n  \"type\": \"shortcut\"\n },\n {\n  \"data\": {\n   \"col\": 4,\n   \"shortcut_name\": \"My QR\"\n  },\n  \"id\": \"qrScMyQr0\",\n  \"type\": \"shortcut\"\n },\n {\n  \"data\": {\n   \"col\": 4,\n   \"shortcut_name\": \"QR Security Settings\"\n  },\n  \"id\": \"qrScSet00\",\n  \"type\": \"shortcut\"\n },\n {\n  \"data\": {\n   \"chart_name\": \"adx_qr_security\",\n   \"col\": 12\n  },\n  \"id\": \"qrDashBlock1\",\n  \"type\": \"chart\"\n },\n {\n  \"data\": {\n   \"col\": 12,\n   \"text\": \"<span class=\\\"h4\\\"><b>Reports</b></span>\"\n  },\n  \"id\": \"qrHeadRpt\",\n  \"type\": \"header\"\n },\n {\n  \"data\": {\n   \"col\": 4,\n   \"shortcut_name\": \"Weekly Security Report\"\n  },\n  \"id\": \"qrScRpt0\",\n  \"type\": \"shortcut\"\n }\n]",
+  "creation": "2026-10-05 10:50:00",
+  "custom_blocks": [],
+  "docstatus": 0,
+  "doctype": "Workspace",
+  "for_user": "",
+  "hide_custom": 0,
+  "icon": "lock",
+  "idx": 0,
+  "indicator_color": "blue",
+  "is_hidden": 0,
+  "label": "Secure QR Login",
+  "link_type": "DocType",
+  "links": [
+    {
+      "hidden": 0,
+      "is_query_report": 0,
+      "label": "Manage",
+      "link_count": 4,
+      "link_type": "DocType",
+      "onboard": 0,
+      "type": "Card Break"
+    },
+    {
+      "hidden": 0,
+      "is_query_report": 0,
+      "label": "QR Login Credential",
+      "link_count": 0,
+      "link_to": "QR Login Credential",
+      "link_type": "DocType",
+      "onboard": 0,
+      "type": "Link"
+    },
+    {
+      "label": "My QR",
+      "type": "Page",
+      "link_to": "my-qr",
+      "hidden": 0,
+      "icon": "fa fa-qrcode",
+      "color": "#4463F0"
+    }
+  ],
+  "modified": "2026-10-06 11:15:58.642357",
+  "modified_by": "Administrator",
+  "module": "Secure QR Login",
+  "name": "Secure QR Login",
+  "number_cards": [],
+  "owner": "Administrator",
+  "parent_page": "",
+  "public": 1,
+  "quick_lists": [],
+  "roles": [
+    {
+      "role": "QR Login Admin"
+    },
+    {
+      "role": "QR Login Manager"
+    },
+    {
+      "role": "Desk User"
+    }
+  ],
+  "sequence_id": 1.0,
+  "shortcuts": [
+    {
+      "color": "Blue",
+      "doc_view": "List",
+      "label": "QR Login Credential",
+      "link_to": "QR Login Credential",
+      "type": "DocType"
+    },
+    {
+      "color": "Green",
+      "doc_view": "List",
+      "label": "QR Login Audit",
+      "link_to": "QR Login Audit",
+      "type": "DocType"
+    },
+    {
+      "color": "Purple",
+      "doc_view": "List",
+      "label": "Devices & Sessions",
+      "link_to": "QR Login Device",
+      "type": "DocType"
+    },
+    {
+      "color": "Cyan",
+      "label": "My QR",
+      "link_to": "my-qr",
+      "type": "Page"
+    },
+    {
+      "color": "Grey",
+      "label": "QR Security Settings",
+      "link_to": "QR Security Settings",
+      "type": "DocType"
+    },
+    {
+      "color": "Orange",
+      "doc_view": "Report",
+      "label": "Weekly Security Report",
+      "link_to": "Weekly Security Report",
+      "type": "Report"
+    }
+  ],
+  "title": "Secure QR Login",
+  "type": "Workspace"
+}

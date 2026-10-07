@@ -128,8 +128,8 @@ def rename_legacy_roles():
 
 def ensure_desk_navigation():
 	from adx_secure_qr_login.desktop import (
-		ensure_audit_link,
 		ensure_audit_analysis_link,
+		ensure_audit_link,
 		ensure_dashboard_link,
 		ensure_devices_link,
 		ensure_my_qr_link,
@@ -182,4 +182,3 @@ def add_roles_to_administrator():
 	if missing:
 		user.flags.ignore_permissions = True
 		user.add_roles(*missing)
-

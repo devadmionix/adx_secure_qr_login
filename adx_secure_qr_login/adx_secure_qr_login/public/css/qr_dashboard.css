@@ -1,0 +1,205 @@
+/* Security dashboard cards. Scoped under .qr-stat-* to avoid core collisions. */
+
+.qr-stat-card {
+	background: #fff;
+	border: 1px solid #ededed;
+	border-radius: 10px;
+	border-top: 3px solid #7c7c7c;
+	padding: 14px 16px;
+}
+
+.qr-stat-card[data-tone="green"] {
+	border-top-color: #12b76a;
+}
+.qr-stat-card[data-tone="orange"] {
+	border-top-color: #f79009;
+}
+.qr-stat-card[data-tone="red"] {
+	border-top-color: #f04438;
+}
+.qr-stat-card[data-tone="blue"] {
+	border-top-color: #2e90fa;
+}
+
+.qr-stat-top {
+	align-items: center;
+	display: flex;
+	justify-content: space-between;
+}
+
+.qr-stat-value {
+	color: #171717;
+	font-size: 28px;
+	font-weight: 700;
+	line-height: 1.2;
+}
+
+.qr-stat-icon {
+	border-radius: 8px;
+	font-size: 14px;
+	font-weight: 700;
+	height: 30px;
+	line-height: 30px;
+	text-align: center;
+	width: 30px;
+}
+
+.qr-stat-icon[data-tone="green"] {
+	background: #e6f9ef;
+	color: #12b76a;
+}
+.qr-stat-icon[data-tone="orange"] {
+	background: #fef3e2;
+	color: #f79009;
+}
+.qr-stat-icon[data-tone="red"] {
+	background: #fee9e7;
+	color: #f04438;
+}
+.qr-stat-icon[data-tone="blue"] {
+	background: #e8f1fe;
+	color: #2e90fa;
+}
+.qr-stat-icon[data-tone="grey"] {
+	background: #f2f2f2;
+	color: #7c7c7c;
+}
+
+.qr-stat-label {
+	color: #7c7c7c;
+	font-size: 12px;
+	margin-top: 2px;
+}
+
+a.qr-stat-link,
+a.qr-stat-link:hover {
+	text-decoration: none;
+}
+
+a.qr-stat-link .qr-stat-card {
+	transition: box-shadow 0.15s ease-in-out;
+}
+
+a.qr-stat-link:hover .qr-stat-card {
+	box-shadow: 0 2px 10px rgba(0, 0, 0, 0.12);
+	cursor: pointer;
+}
+
+.adx-dash-loading {
+	padding: 24px;
+	text-align: center;
+}
+
+/* Dashboard header: gradient badge, title, live timestamp, refresh. */
+.adx-dash-head {
+	align-items: center;
+	display: flex;
+	gap: 12px;
+	margin-bottom: 14px;
+}
+
+.adx-dash-badge {
+	align-items: center;
+	background: linear-gradient(135deg, #2e90fa 0%, #12b76a 100%);
+	border-radius: 10px;
+	color: #fff;
+	display: flex;
+	flex-shrink: 0;
+	font-size: 15px;
+	font-weight: 700;
+	height: 40px;
+	justify-content: center;
+	width: 40px;
+}
+
+.adx-dash-title {
+	font-size: 17px;
+	font-weight: 700;
+}
+
+.adx-dash-sub {
+	color: #7c7c7c;
+	font-size: 12px;
+}
+
+/* Section panels group charts and tables into cards. */
+.adx-panel {
+	background: #fff;
+	border: 1px solid #ededed;
+	border-radius: 10px;
+	margin-bottom: 14px;
+	padding: 14px 16px;
+}
+
+.adx-panel h5 {
+	font-size: 13px;
+	font-weight: 700;
+	margin: 0 0 10px;
+}
+
+/* Failure reasons as horizontal bars. */
+.adx-reason {
+	margin-bottom: 10px;
+}
+
+.adx-reason-head {
+	display: flex;
+	font-size: 12px;
+	justify-content: space-between;
+	margin-bottom: 3px;
+}
+
+.adx-reason-head strong {
+	font-size: 13px;
+}
+
+.adx-reason-bar {
+	background: #f0f0f0;
+	border-radius: 3px;
+	height: 6px;
+	overflow: hidden;
+}
+
+.adx-reason-bar > span {
+	border-radius: 3px;
+	display: block;
+	height: 100%;
+}
+
+.adx-reason-bar > span[data-tone="red"] {
+	background: linear-gradient(90deg, #f04438, #f79009);
+}
+.adx-reason-bar > span[data-tone="orange"] {
+	background: linear-gradient(90deg, #f79009, #fec84b);
+}
+
+/* Credential form: the QR preview and its actions. */
+.qr-credential-actions {
+	border-top: 1px solid #ededed;
+	margin-top: 12px;
+	padding-top: 12px;
+}
+
+.qr-preview {
+	text-align: center;
+}
+
+.qr-preview img,
+.qr-preview .qr-preview-svg {
+	border: 1px solid #ededed;
+	border-radius: 8px;
+	max-width: 260px;
+	padding: 10px;
+	width: 100%;
+}
+
+.qr-once-notice {
+	background: #fffaeb;
+	border: 1px solid #fedf89;
+	border-radius: 6px;
+	color: #b54708;
+	font-size: 12px;
+	margin-top: 10px;
+	padding: 8px 10px;
+	text-align: left;
+}

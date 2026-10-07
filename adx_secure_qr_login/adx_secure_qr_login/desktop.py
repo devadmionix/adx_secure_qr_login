@@ -317,52 +317,6 @@ def ensure_my_qr_link() -> bool:
 AUDIT_REPORT = "QR Login Audit Analysis"
 
 
-AUDIT_REPORT = "QR Login Audit Analysis"
-AUDIT_DOCTYPE = "QR Login Audit"
-AUDIT_LABEL = "QR Login Audit"
-
-_STALE_AUDIT_PAGES = frozenset({"qr-login-audit"})
-
-def ensure_audit_link() -> bool:
-	"""Ensure 'QR Login Audit' sidebar/workspace links point to the DocType."""
-	ok = False
-	try:
-		if not frappe.db.exists("DocType", AUDIT_DOCTYPE):
-			return False
-		if frappe.db.exists("Workspace Sidebar", WORKSPACE):
-			sidebar = frappe.get_doc("Workspace Sidebar", WORKSPACE)
-			items = [i.as_dict() for i in sidebar.get("items") or []]
-			items = [i for i in items if not (i.get("label") == AUDIT_LABEL and i.get("link_type") == "Page")]
-			if not any(i.get("label") == AUDIT_LABEL and i.get("link_to") == AUDIT_DOCTYPE and i.get("link_type") == "DocType" for i in items):
-				anchor = next((idx for idx, i in enumerate(items) if i.get("link_to") == "QR Login Credential" and i.get("link_type") == "DocType"), len(items) - 1)
-				items.insert(anchor + 1, {"label": AUDIT_LABEL, "type": "Link", "link_type": "DocType", "link_to": AUDIT_DOCTYPE, "icon": "table"})
-			sidebar.set("items", [])
-			for row in items:
-				for key in ("name", "idx", "parent", "parenttype", "parentfield", "doctype", "creation", "modified", "modified_by", "owner", "docstatus"):
-					row.pop(key, None)
-			sidebar.append("items", row)
-			sidebar.flags.ignore_permissions = True
-			sidebar.save(ignore_permissions=True)
-			ok = True
-		if frappe.db.exists("Workspace", WORKSPACE):
-			workspace = frappe.get_doc("Workspace", WORKSPACE)
-			changed = False
-			for s in workspace.get("shortcuts") or []:
-				if s.get("label") == AUDIT_LABEL:
-					if s.get("link_to") != AUDIT_DOCTYPE or s.get("type") != "DocType":
-						s.link_to = AUDIT_DOCTYPE
-						s.type = "DocType"
-						s.doc_view = "List"
-						changed = True
-			if changed:
-				workspace.flags.ignore_permissions = True
-				workspace.save(ignore_permissions=True)
-			ok = True
-	except Exception:
-		frappe.log_error(title="QR audit link failed", message=frappe.get_traceback())
-	return ok
-
-
 def ensure_audit_analysis_link() -> bool:
 	"""Expose the QR Login Audit Analysis report under Reports in workspace and sidebar.
 
@@ -482,5 +436,113 @@ def ensure_audit_analysis_link() -> bool:
 			ok = True
 	except Exception:
 		frappe.log_error(title="Audit analysis sidebar link failed", message=frappe.get_traceback())
+
+	return ok
+
+
+AUDIT_DOCTYPE = "QR Login Audit"
+AUDIT_LABEL = "QR Login Audit"
+# A hand-made Page used to be wired in here; it had no working controller, so the
+# sidebar entry did nothing when clicked. Any link to it is repaired below.
+_STALE_AUDIT_PAGES = ("qr-login-audit", "qr_login_audit")
+_ROW_META = (
+	"name", "idx", "parent", "parenttype", "parentfield",
+	"doctype", "creation", "modified", "modified_by", "owner", "docstatus",
+)
+
+
+def ensure_audit_link() -> bool:
+	"""Make "QR Login Audit" open the audit DocType list from the sidebar.
+
+	Same contract as the other helpers: idempotent, re-applied after every
+	migrate, never raises. It also repairs sites that already hold a broken link
+	to the removed `qr-login-audit` Page, and deletes that orphan Page record.
+	"""
+	if not frappe.db.exists("DocType", AUDIT_DOCTYPE):
+		return False
+
+	ok = False
+	try:
+		for page in _STALE_AUDIT_PAGES:
+			if frappe.db.exists("Page", page):
+				frappe.delete_doc("Page", page, ignore_permissions=True, force=True)
+
+		if frappe.db.exists("Workspace", WORKSPACE):
+			workspace = frappe.get_doc("Workspace", WORKSPACE)
+			changed = False
+			for row in workspace.get("shortcuts") or []:
+				if row.label == AUDIT_LABEL and (
+					row.type != "DocType" or row.link_to != AUDIT_DOCTYPE
+				):
+					row.type, row.link_to, row.doc_view = "DocType", AUDIT_DOCTYPE, "List"
+					changed = True
+			if not any(
+				s.link_to == AUDIT_DOCTYPE and s.type == "DocType"
+				for s in workspace.get("shortcuts") or []
+			):
+				workspace.append(
+					"shortcuts",
+					{
+						"color": "Green",
+						"doc_view": "List",
+						"label": AUDIT_LABEL,
+						"link_to": AUDIT_DOCTYPE,
+						"type": "DocType",
+					},
+				)
+				changed = True
+			if changed:
+				workspace.flags.ignore_permissions = True
+				workspace.save(ignore_permissions=True)
+			ok = True
+	except Exception:
+		frappe.log_error(title="QR audit workspace link failed", message=frappe.get_traceback())
+
+	try:
+		if frappe.db.exists("Workspace Sidebar", WORKSPACE):
+			sidebar = frappe.get_doc("Workspace Sidebar", WORKSPACE)
+			items = [i.as_dict() for i in sidebar.get("items") or []]
+			changed = False
+			found = False
+			for i in items:
+				if i.get("label") == AUDIT_LABEL or i.get("link_to") in _STALE_AUDIT_PAGES:
+					found = True
+					if i.get("link_type") != "DocType" or i.get("link_to") != AUDIT_DOCTYPE:
+						i["link_type"], i["link_to"] = "DocType", AUDIT_DOCTYPE
+						changed = True
+				elif i.get("link_to") == AUDIT_DOCTYPE and i.get("link_type") == "DocType":
+					found = True
+			if not found:
+				anchor = next(
+					(
+						idx
+						for idx, i in enumerate(items)
+						if i.get("link_to") == "QR Login Credential"
+						and i.get("link_type") == "DocType"
+					),
+					len(items) - 1,
+				)
+				items.insert(
+					anchor + 1,
+					{
+						"label": AUDIT_LABEL,
+						"type": "Link",
+						"link_type": "DocType",
+						"link_to": AUDIT_DOCTYPE,
+						"icon": "list",
+					},
+				)
+				changed = True
+			if changed:
+				sidebar.set("items", [])
+				for row in items:
+					for key in _ROW_META:
+						row.pop(key, None)
+					sidebar.append("items", row)
+				sidebar.flags.ignore_permissions = True
+				sidebar.save(ignore_permissions=True)
+			ok = True
+	except Exception:
+		frappe.log_error(title="QR audit sidebar link failed", message=frappe.get_traceback())
 
 	return ok
