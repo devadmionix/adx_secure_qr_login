@@ -124,14 +124,14 @@ class TestUserCompanyGate(FrappeTestCase):
 		"""Scanner sees only the generic message; no session is created."""
 		from adx_secure_qr_login.api.qr_auth import qr_exchange
 		from adx_secure_qr_login.secure_qr_login.constants import (
-			GENERIC_LOGIN_FAILURE_MESSAGE,
+			generic_login_failure_message,
 		)
 
 		self._set_company(None)
 		gen = self._mint()
 		result = qr_exchange(qr_token=gen["one_time_token"])
 		self.assertEqual(result["status"], "failed")
-		self.assertEqual(result["message"], GENERIC_LOGIN_FAILURE_MESSAGE)
+		self.assertEqual(result["message"], generic_login_failure_message())
 		self.assertNotIn("company", result["message"].lower())
 
 	# -- Test 3: disabled user ------------------------------------------

@@ -65,19 +65,19 @@ def execute(filters=None):
 		conditions.append("period_start <= %s")
 		args.append(str(filters["to_date"]))
 
-	where = f"WHERE {' AND '.join(conditions)}" if conditions else ""
-	rows = frappe.db.sql(
-		f"""
-		SELECT period_start, period_end,
-			successful_logins, failed_attempts,
-			active_credentials, expired_credentials, revoked_credentials
-		FROM `tabWeekly Security Report`
-		{where}
-		ORDER BY period_start
-		""",
-		tuple(args),
-		as_dict=True,
+	# Concatenated, never interpolated: the only variable parts are the fixed
+	# "%s" predicates above and the bound values in `args`.
+	where = ("WHERE " + " AND ".join(conditions)) if conditions else ""
+	query = (
+		"SELECT period_start, period_end, "
+		"successful_logins, failed_attempts, "
+		"active_credentials, expired_credentials, revoked_credentials "
+		"FROM `tabWeekly Security Report` "
+		+ where
+		+ " ORDER BY period_start"
 	)
+
+	rows = frappe.db.sql(query, tuple(args), as_dict=True)
 
 	if not rows:
 		return (

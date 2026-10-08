@@ -24,6 +24,12 @@ class QRSecuritySettings(Document):
 		self.clamp_lockout()
 		self.clamp_report_hour()
 
+	# `clamp_validity` deliberately has no `on_update` call: `on_update` runs
+	# *after* the row is written, so clamping there would modify the document
+	# without ever persisting it. `validate` runs before the write, so the
+	# clamped `default_validity_days` / `max_validity_days` are saved with the
+	# rest of the Single.
+
 	def clamp_report_hour(self):
 		hour = self.get("weekly_report_hour")
 		self.weekly_report_hour = 8 if hour is None else min(max(int(hour), 0), 23)
@@ -117,9 +123,6 @@ class QRSecuritySettings(Document):
 			)
 
 		return result
-
-	def on_update(self):
-		self.clamp_validity()
 
 	def record_security_changes(self):
 		"""Audit every setting change (spec 14 SECURITY_SETTING_CHANGED).

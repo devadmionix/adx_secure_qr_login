@@ -233,7 +233,15 @@ def compute_metrics(period_start: str, period_end: str) -> dict:
 
 # --------------------------------------------------------------- generation
 
-def _insert_report(metrics: dict, commit: bool) -> str:
+def _insert_report(metrics: dict) -> str:
+	"""Insert one report row inside the caller's transaction.
+
+	No explicit commit: the callers are the POST endpoint
+	`generate_weekly_security_report` and the Monday scheduler job, and frappe
+	commits both (frappe/app.py:466, background_jobs.py:303). The row therefore
+	cannot survive a rollback of the request that produced it, which is what keeps
+	`exists` checks and the emailed summary consistent.
+	"""
 	doc = frappe.get_doc(
 		{
 			"doctype": REPORT_DOCTYPE,
@@ -249,14 +257,10 @@ def _insert_report(metrics: dict, commit: bool) -> str:
 	)
 	doc.flags.ignore_permissions = True
 	doc.insert(ignore_permissions=True)
-	if commit:
-		frappe.db.commit()
 	return doc.name
 
 
-def _generate(
-	period_start: str, period_end: str, commit: bool = True
-) -> dict:
+def _generate(period_start: str, period_end: str) -> dict:
 	"""Shared implementation: compute everything first, then insert once.
 
 	Duplicate-safe: an existing report for the same period is returned
@@ -284,7 +288,7 @@ def _generate(
 		return {"status": "error", "reason": "data_collection"}
 
 	try:
-		name = _insert_report(metrics, commit=commit)
+		name = _insert_report(metrics)
 	except Exception:
 		frappe.log_error(
 			title="Weekly security report creation failed",

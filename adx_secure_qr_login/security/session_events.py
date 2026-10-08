@@ -45,8 +45,11 @@ def record_user_disabled(doc, method=None) -> None:
 	terminated = session_guard.terminate_user_sessions(
 		doc.name, reason="User account disabled"
 	)
-	frappe.db.commit()
-
+	# No explicit commit here. This hook runs inside the caller's `User` save,
+	# so committing would also commit a document that is still mid-save: a
+	# failure in a later validator would leave the user half-written. The
+	# disable, the session deletions and the audit rows belong to the caller's
+	# one transaction, which frappe commits at the end of the request.
 	log_event(
 		EVENT_USER_DISABLED,
 		user=doc.name,
@@ -54,7 +57,7 @@ def record_user_disabled(doc, method=None) -> None:
 		reason_code=REASON_OK,
 		actor=frappe.session.user,
 		details={"sessions_terminated": terminated},
-		commit=True,
+		commit=False,
 	)
 
 	if terminated:
@@ -96,7 +99,11 @@ def terminate_sessions(user: str, reason: str | None = None) -> int:
 	before = frappe.db.sql("SELECT COUNT(*) FROM tabSessions WHERE `user` = %s", (user,))[0][0]
 
 	clear_sessions(user, force=True)
-	frappe.db.commit()
+	# No explicit commit: the only caller is the POST endpoint
+	# `api.qr_manage.terminate_user_sessions`, and frappe commits a mutating
+	# request once the response is produced (frappe/app.py:466). The deletes are
+	# visible to the `after` count below either way -- same transaction,
+	# same connection.
 
 	after = frappe.db.sql("SELECT COUNT(*) FROM tabSessions WHERE `user` = %s", (user,))[0][0]
 	terminated = max(before - after, 0)

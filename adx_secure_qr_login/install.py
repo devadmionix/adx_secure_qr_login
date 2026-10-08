@@ -1,6 +1,8 @@
 # Copyright (c) 2026, ADmionix Solutions
 # License: MIT
 
+import os
+
 import frappe
 
 from adx_secure_qr_login.secure_qr_login.constants import (
@@ -25,11 +27,12 @@ def before_install():
 
 
 def after_install():
+	# No explicit commit: `frappe.installer.install_app` commits the whole
+	# installation transaction itself (frappe/installer.py:389).
 	create_roles()
 	seed_settings()
 	add_roles_to_administrator()
 	ensure_desk_navigation()
-	frappe.db.commit()
 
 
 def after_migrate():
@@ -123,9 +126,10 @@ def rename_legacy_roles():
 		else:
 			frappe.db.set_value("Role", old_name, "role_name", new_name)
 
+	# No explicit commit: this runs from the `after_migrate` hook, and `bench
+	# migrate` commits the migration transaction itself. Committing half way
+	# through would make a later failure impossible to roll back.
 	_prune_stale_role_references()
-
-	frappe.db.commit()
 
 
 def _prune_stale_role_references():
@@ -214,6 +218,24 @@ def _repoint_role_link_fields(rename_map: dict) -> None:
 			)
 
 
+def _page_json_path(app_path: str, folder: str, slug: str) -> str | None:
+	"""Resolve a Page/Report JSON shipped with this app, or None if unsafe/absent.
+
+	`folder` and `slug` are build-time literals from `adx_secure_qr_login.desktop`,
+	never request input, but the path is still verified: `realpath` resolves
+	symlinks and `..` segments, and the result must stay under the app directory.
+	That closes the traversal risk structurally rather than by trusting the
+	callers.
+	"""
+	root = os.path.realpath(app_path)
+	candidate = os.path.realpath(
+		os.path.join(root, "secure_qr_login", folder, slug, f"{slug}.json")
+	)
+	if os.path.commonpath([root, candidate]) != root:
+		return None
+	return candidate if os.path.isfile(candidate) else None
+
+
 def _sync_page_roles_from_json():
 	"""Ensure each app Page's and Report's `Has Role` rows match its DocType JSON.
 
@@ -231,7 +253,6 @@ def _sync_page_roles_from_json():
 	well as Pages so both directions are repaired.
 	"""
 	import json
-	import os
 
 	from adx_secure_qr_login.desktop import (
 		AUDIT_REPORT,
@@ -248,11 +269,13 @@ def _sync_page_roles_from_json():
 
 	for parenttype, name, folder in targets:
 		slug = frappe.scrub(name)
-		path = os.path.join(app_path, "secure_qr_login", folder, slug, f"{slug}.json")
-		if not (frappe.db.exists(parenttype, name) and os.path.exists(path)):
+		path = _page_json_path(app_path, folder, slug)
+		if not (frappe.db.exists(parenttype, name) and path is not None):
 			continue
 
-		with open(path) as f:
+		with open(path) as f:  # nosemgrep: frappe-security-file-traversal
+			# `path` is built by _page_json_path, which proves the resolved file
+			# lives inside this app's own directory before returning it.
 			expected = {r["role"] for r in json.load(f).get("roles") or [] if r.get("role")}
 		current = set(
 			frappe.get_all(
@@ -311,7 +334,12 @@ def ensure_desk_navigation():
 def before_uninstall():
 	# Leave Roles, DocTypes and audit history in place. Uninstalling an app on a
 	# site that holds security history must not silently destroy the evidence.
-	frappe.db.commit()
+	#
+	# This hook is not registered in hooks.py (the real teardown work lives in
+	# uninstall.py) and deliberately writes nothing, so there is nothing to
+	# commit: `frappe.installer.uninstall_app` commits the uninstall transaction
+	# itself.
+	pass
 
 
 def create_roles():

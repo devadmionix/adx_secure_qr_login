@@ -59,7 +59,10 @@ def refresh_expiry_status():
 			commit=False,
 		)
 
-	frappe.db.commit()
+	# No explicit commit: `execute_job` commits when the job returns
+	# (frappe/utils/background_jobs.py:303), so the status flips and their audit
+	# rows land in one transaction. A mid-loop commit here would leave expired
+	# statuses behind whenever a later row failed.
 	return {"updated": len(stale)}
 
 
@@ -96,7 +99,8 @@ def purge_expired_audit():
 	)
 	deleted = frappe.db._cursor.rowcount if frappe.db._cursor else 0
 
-	frappe.db.commit()
+	# No explicit commit: the scheduler commits the job's transaction on return,
+	# so the DELETE and the log line below are recorded together.
 
 	frappe.log_error(
 		title="QR audit retention purge",

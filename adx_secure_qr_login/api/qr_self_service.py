@@ -53,9 +53,12 @@ GENERATE_EMAIL_LIMIT = 5
 GENERATE_EMAIL_WINDOW = 60 * 60
 CONSUME_GRACE_SECONDS = 10
 
-GENERIC_GENERATE_FAILURE = frappe._(
-	"Unable to generate QR code. Please check your email address."
-)
+# A function, not a module-level constant: `frappe._()` resolves against the
+# current site and language, so a literal would freeze the translation of
+# whichever site first imported this module.
+def generic_generate_failure() -> str:
+	"""Uniform failure message for every self-service generation error."""
+	return frappe._("Unable to generate QR code. Please check your email address.")
 
 
 def _cache_key(key: str) -> str:
@@ -142,15 +145,15 @@ def request_login_qr(email: str = None) -> dict:
 	settings = get_settings()
 
 	if not settings.allow_self_service_qr or not settings.qr_login_enabled:
-		frappe.throw(GENERIC_GENERATE_FAILURE)
+		frappe.throw(generic_generate_failure())
 
 	if not _transport_is_secure(settings):
-		frappe.throw(GENERIC_GENERATE_FAILURE)
+		frappe.throw(generic_generate_failure())
 
 	if _hit_limit(
 		f"qr_selfsvc:ip:{_request_ip()}", GENERATE_IP_LIMIT, GENERATE_IP_WINDOW
 	):
-		frappe.throw(GENERIC_GENERATE_FAILURE)
+		frappe.throw(generic_generate_failure())
 
 	clean = (email or "").strip().lower()
 	if _hit_limit(
@@ -158,7 +161,7 @@ def request_login_qr(email: str = None) -> dict:
 		GENERATE_EMAIL_LIMIT,
 		GENERATE_EMAIL_WINDOW,
 	):
-		frappe.throw(GENERIC_GENERATE_FAILURE)
+		frappe.throw(generic_generate_failure())
 
 	user = _resolve_account(clean)
 	if not user:
@@ -168,7 +171,7 @@ def request_login_qr(email: str = None) -> dict:
 			reason_code=REASON_INVALID_CREDENTIAL,
 			details={"channel": "self_service"},
 		)
-		frappe.throw(GENERIC_GENERATE_FAILURE)
+		frappe.throw(generic_generate_failure())
 
 	key = frappe.generate_hash()
 	frappe.cache.set_value(_cache_key(key), user, expires_in_sec=EXPIRY_SECONDS)

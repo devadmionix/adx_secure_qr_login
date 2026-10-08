@@ -13,14 +13,30 @@ levels and company restrictions they already had.
 > creation reuses `LoginManager.login_as()`, the same path Frappe's own one-time
 > login link uses.
 
+<img src="adx_secure_qr_login/public/logo.svg" alt="ADmionix Secure QR Login" width="120">
+
+## Screenshots
+
+The login page gains **Login with QR** and **Generate QR Code** beside the
+password form — no separate page, no separate portal:
+
+![Login page with the Login with QR option](docs/screenshots/login-with-qr.png)
+
+Opening the scanner gives a camera capture with a paste-a-token fallback, plus
+the self-service generate panel for a user who has no QR yet:
+
+![QR credential scanner with self-service generation](docs/screenshots/qr-scanner.png)
+
+
 ---
 
 ## Contents
 
 - [How it works](#how-it-works)
-- [Security design](#security-design)
+- [Screenshots](#screenshots)
+- [Security design](#security-design)</path>
 - [Roles](#roles)
-- [Install](#install)
+- [Setup](#setup)
 - [Configuration](#configuration)
 - [User guide](#user-guide)
 - [Testing](#testing)
@@ -159,26 +175,23 @@ never the control — the endpoint matrix in [Testing](#testing) proves a plain
 
 ---
 
-## Install
+## Setup
 
-On an existing site:
+The app is installed like any other Frappe app, from your site's app list — the
+`Apps` screen in the desk, or the marketplace listing if you are on Frappe Cloud.
+See the [Frappe installation guide](https://docs.frappe.io/framework/user/en/installation)
+for the generic procedure; nothing in this app needs a manual step beyond that.
 
-```bash
-bench --site <site> install-app adx_secure_qr_login
-bench --site <site> migrate
-bench build --app adx_secure_qr_login
-```
+Once installed, migrate the site: the migration creates the roles, syncs the
+DocTypes and runs the patches that grant the QR roles to Administrator. Then log
+in and open **Secure QR Login** from the app switcher.
 
-`migrate` creates the roles, syncs the DocTypes and runs the patches that grant
-the QR roles to Administrator. Then log in and open **Secure QR Login** from the
-app switcher.
+Grant roles from the desk, on each staff user's **User** → *Roles* child table:
 
-Grant roles to staff from **User** → *Roles*:
-
-```bash
-bench --site <site> add-role "QR Login Manager" jane@example.com
-bench --site <site> add-role "QR Login Admin" admin@example.com
-```
+| Role | For |
+|---|---|
+| `QR Login Admin` | Full access, settings, reports, force-logout |
+| `QR Login Manager` | Issue and revoke credentials for users in their company scope |
 
 ---
 

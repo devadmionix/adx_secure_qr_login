@@ -159,7 +159,7 @@ class TestWeeklySecurityReport(FrappeTestCase):
 	def _generate(self, start=PERIOD_START, end=PERIOD_END):
 		from adx_secure_qr_login.security import weekly_report
 
-		return weekly_report._generate(start, end, commit=False)
+		return weekly_report._generate(start, end)
 
 	def test_successful_login_count(self):
 		result = self._generate()

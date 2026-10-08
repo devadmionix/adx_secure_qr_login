@@ -73,7 +73,7 @@ def get_device(device: str) -> dict:
 	}
 
 
-@frappe.whitelist()
+@frappe.whitelist(methods=["POST"])
 def revoke_device(device: str) -> dict:
 	"""Revoke a device.
 
@@ -91,28 +91,28 @@ def revoke_device(device: str) -> dict:
 	# The mutation and its audit row live in `security.devices` so the desk form
 	# and this endpoint cannot diverge in what they write.
 	terminated = devices.revoke_device(device)
-	frappe.db.commit()
 
+	# No explicit commit: POST-only, so frappe commits this request's transaction
+	# when the response is produced (frappe/app.py:466). The revoke, the audit
+	# row and the session deletions are therefore all-or-nothing.
 	return {"device": device, "status": "revoked", "sessions_terminated": terminated}
 
 
-@frappe.whitelist()
+@frappe.whitelist(methods=["POST"])
 def trust_device(device: str) -> dict:
 	"""Mark a device as trusted."""
 	rbac.assert_can_manage_device(device, "trust_device")
 
 	devices.set_trusted(device, True)
-	frappe.db.commit()
 
 	return {"device": device, "trusted": True}
 
 
-@frappe.whitelist()
+@frappe.whitelist(methods=["POST"])
 def untrust_device(device: str) -> dict:
 	"""Remove trusted status from a device."""
 	rbac.assert_can_manage_device(device, "untrust_device")
 
 	devices.set_trusted(device, False)
-	frappe.db.commit()
 
 	return {"device": device, "trusted": False}

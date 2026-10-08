@@ -24,4 +24,7 @@ def before_uninstall():
 				continue
 			doc = frappe.get_doc("User", user)
 			doc.remove_roles(role)
-	frappe.db.commit()
+
+	# No explicit commit: `frappe.installer.uninstall_app` commits the uninstall
+	# transaction once every hook has run, so a failure part way through still
+	# rolls the role removals back with everything else.

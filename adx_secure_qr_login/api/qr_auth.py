@@ -30,13 +30,13 @@ from adx_secure_qr_login.secure_qr_login.constants import (
 	EVENT_LOGIN_SUCCESS,
 	EVENT_RATE_LIMITED,
 	EVENT_SECURITY_VALIDATION_FAILED,
-	GENERIC_LOGIN_FAILURE_MESSAGE,
 	REASON_CONCURRENT_SESSION,
 	REASON_LOCKED,
 	REASON_OK,
 	REASON_RATE_LIMITED,
 	REASON_REPLAY_DETECTED,
 	REASON_SECURITY_VALIDATION_FAILED,
+	generic_login_failure_message,
 )
 from adx_secure_qr_login.secure_qr_login.doctype.qr_login_audit.qr_login_audit import (
 	detect_company,
@@ -169,7 +169,7 @@ def qr_exchange(qr_token: str = None, otp: str = None, tmp_id: str = None) -> di
 		)
 
 	if not qr_token:
-		return _failed(GENERIC_LOGIN_FAILURE_MESSAGE)
+		return _failed(generic_login_failure_message())
 
 	# Rate limiting runs before any database work. A rate-limited caller is
 	# rejected with the same generic message as any other failure, so the limit
@@ -183,7 +183,7 @@ def qr_exchange(qr_token: str = None, otp: str = None, tmp_id: str = None) -> di
 			reason_code=REASON_RATE_LIMITED,
 			details={"scope": "endpoint"},
 		)
-		return _failed(GENERIC_LOGIN_FAILURE_MESSAGE)
+		return _failed(generic_login_failure_message())
 
 	# ---------------------------------------------------------- validate
 	try:
@@ -210,7 +210,7 @@ def qr_exchange(qr_token: str = None, otp: str = None, tmp_id: str = None) -> di
 			details=rejected.details,
 			company=validation.get_user_company(rejected.user) if rejected.user else None,
 		)
-		return _failed(GENERIC_LOGIN_FAILURE_MESSAGE)
+		return _failed(generic_login_failure_message())
 
 	doc = frappe.get_doc("QR Login Credential", credential)
 	user = doc.user
@@ -230,7 +230,7 @@ def qr_exchange(qr_token: str = None, otp: str = None, tmp_id: str = None) -> di
 			details={"reason": "device_revoked"},
 			company=validation.get_user_company(user),
 		)
-		return _failed(GENERIC_LOGIN_FAILURE_MESSAGE)
+		return _failed(generic_login_failure_message())
 
 	# ------------------------------------------------------------- 2FA step
 	if settings.require_2fa_on_qr_login:
@@ -292,7 +292,7 @@ def qr_exchange(qr_token: str = None, otp: str = None, tmp_id: str = None) -> di
 			reason_code=REASON_RATE_LIMITED,
 			details={"reason": "concurrent_session_limit"},
 		)
-		return _failed(GENERIC_LOGIN_FAILURE_MESSAGE)
+		return _failed(generic_login_failure_message())
 
 	# Shared-terminal hygiene: the previous occupant's session is destroyed
 	# before the new one exists, not merely overwritten by the cookie.

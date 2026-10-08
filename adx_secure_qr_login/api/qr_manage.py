@@ -171,7 +171,7 @@ def _issue_credential(
 	device_label: str | None = None,
 	trigger: str | None = None,
 ) -> dict:
-	"""Mint, commit and audit one credential. Authorization is the caller's job.
+	"""Mint and audit one credential. Authorization is the caller's job.
 
 	Shared by `generate_credential` (managers) and `qr_my.generate_my_qr`
 	(self-service) so both paths apply the same validation, cap, expiry and audit
@@ -181,7 +181,9 @@ def _issue_credential(
 	_enforce_active_cap(target)
 
 	result = _mint(target, validity_days, device_label, generation=1)
-	frappe.db.commit()
+	# No explicit commit: every caller is a POST-only endpoint, so frappe commits
+	# the request transaction once the response is produced. The credential, its
+	# audit row and the one-time image are therefore all-or-nothing.
 
 	details = {
 		"generation": result["doc"].generation,
@@ -302,7 +304,11 @@ def regenerate_credential(
 
 	# Flip the old credential first. Doing it before the mint means a failure in
 	# the mint path leaves the user with a revoked credential rather than two
-	# live ones -- the safer of the two possible partial states.
+	# live ones -- the safer of the two possible partial states. Neither step is
+	# committed on its own: the whole regeneration (supersede, mint, back-link,
+	# two audit rows) is one request transaction, so a failure anywhere leaves the
+	# user exactly as they were rather than with a superseded credential and no
+	# replacement.
 	frappe.flags.in_qr_rotate = True
 	doc.status = CREDENTIAL_STATUS_SUPERSEDED
 	doc.revoked_on = frappe.utils.now()
@@ -310,8 +316,6 @@ def regenerate_credential(
 	doc.revocation_reason = frappe._("Superseded by regeneration")
 	doc.save(ignore_permissions=True)
 	frappe.flags.in_qr_rotate = False
-
-	frappe.db.commit()
 
 	result = _mint(
 		doc.user,
@@ -327,7 +331,6 @@ def regenerate_credential(
 		result["doc"].name,
 		update_modified=False,
 	)
-	frappe.db.commit()
 
 	log_event(
 		EVENT_REGENERATED,
@@ -379,7 +382,12 @@ def _revoke_credential(
 	doc.save(ignore_permissions=True)
 
 	qr_image.delete_qr_files(doc.name)
-	frappe.db.commit()
+	# Commit required here: deleting the printable QR from disk cannot be rolled
+	# back, so the revoke is committed in the same transaction. Without it, a
+	# later failure would roll the status back to Active while the image is
+	# already gone. nosemgrep because the framework transaction model has no
+	# hook for irreversible filesystem writes.
+	frappe.db.commit()  # nosemgrep: frappe-manual-commit
 
 	# Spec 8: revocation must also handle the session already established from
 	# this credential, not merely block the next login.
@@ -388,7 +396,9 @@ def _revoke_credential(
 		terminated = session_guard.terminate_user_sessions(
 			doc.user, reason=f"QR credential {doc.name} revoked"
 		)
-		frappe.db.commit()
+	# No commit for the session terminations: both callers are POST-only
+	# endpoints (`revoke_credential`, `qr_my.revoke_my_qr`), so frappe commits
+	# those together with the audit rows at the end of the request.
 
 	log_event(
 		EVENT_REVOKED,

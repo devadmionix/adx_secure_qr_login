@@ -68,10 +68,13 @@ def _visible_user_clause(column: str) -> tuple[str, list]:
 
 	if not visible:
 		# No visible users: an impossible predicate rather than `IN ()`.
-		return f" AND 1 = 0", []
+		return " AND 1 = 0", []
 
-	names = ", ".join(frappe.db.escape(v) for v in visible)
-	return f" AND `{column}` IN ({names})", []
+	# The user names travel as bound parameters, never as SQL text: the only
+	# thing this function is allowed to splice into the query is a caller-chosen
+	# column name and a run of `%s` placeholders.
+	placeholders = ", ".join(["%s"] * len(visible))
+	return " AND `" + column + "` IN (" + placeholders + ")", list(visible)
 
 
 def credential_counts() -> dict:
@@ -83,16 +86,14 @@ def credential_counts() -> dict:
 	"""
 	where, args = _visible_user_clause("user")
 
-	rows = frappe.db.sql(
-		f"""
-		SELECT status, COUNT(*) AS count
-		FROM `tabQR Login Credential`
-		WHERE 1 = 1{where}
-		GROUP BY status
-		""",
-		tuple(args),
-		as_dict=True,
+	query = (
+		"SELECT status, COUNT(*) AS count FROM `tabQR Login Credential` "
+		"WHERE 1 = 1"
+		+ where
+		+ " GROUP BY status"
 	)
+
+	rows = frappe.db.sql(query, tuple(args), as_dict=True)
 	# as_dict keys off the result-column label, so COUNT(*) must be aliased
 	# explicitly or the row has no "count" key.
 	counts = {r["status"]: r["count"] for r in rows}
@@ -146,12 +147,9 @@ def authentication_counts(
 			conditions.append("`company` = %s")
 			args.append(company)
 		rows = frappe.db.sql(
-			f"""
-			SELECT event, success, COUNT(*) AS count
-			FROM `tabQR Login Audit`
-			WHERE {" AND ".join(conditions)}
-			GROUP BY event, success
-			""",
+			"SELECT event, success, COUNT(*) AS count FROM `tabQR Login Audit` WHERE "
+			+ " AND ".join(conditions)
+			+ " GROUP BY event, success",
 			tuple(args),
 			as_dict=True,
 		)
@@ -204,16 +202,13 @@ def _permission_scoped_tally(
 		args = [fr_fr, to_fr]
 		for key, column in (("user", "user"), ("company", "company")):
 			if filters.get(key):
-				where.append(f"{column} = %s")
+				where.append("`" + column + "` = %s")
 				args.append(filters[key])
 
 		rows = frappe.db.sql(
-			f"""
-			SELECT event, reason_code, COUNT(*) AS count
-			FROM `tabQR Login Audit`
-			WHERE {" AND ".join(where)}
-			GROUP BY event, reason_code
-			""",
+			"SELECT event, reason_code, COUNT(*) AS count FROM `tabQR Login Audit` WHERE "
+			+ " AND ".join(where)
+			+ " GROUP BY event, reason_code",
 			tuple(args),
 			as_dict=True,
 		)
@@ -306,10 +301,14 @@ def daily_login_series(
 	fr_fr, to_fr = _bounds(frm, to)
 	where, scope_args = _visible_user_clause("user")
 
+	# Argument order must mirror the placeholder order in the query below:
+	# event, the failed-event IN(...) list, the window, then the scope clause
+	# (which already carries its own placeholders), then the display filters.
 	args: list = [EVENT_LOGIN_SUCCESS]
 	placeholders = ", ".join(["%s"] * len(FAILED_LOGIN_EVENTS))
 	args.extend(FAILED_LOGIN_EVENTS)
 	args.extend([fr_fr, to_fr])
+	args.extend(scope_args)
 
 	if user:
 		where += " AND `user` = %s"
@@ -318,19 +317,19 @@ def daily_login_series(
 		where += " AND `company` = %s"
 		args.append(company)
 
-	rows = frappe.db.sql(
-		f"""
-		SELECT DATE(occurred_on) AS day,
-			SUM(CASE WHEN event = %s AND success = 1 THEN 1 ELSE 0 END) AS successful,
-			SUM(CASE WHEN success = 0 AND event IN ({placeholders}) THEN 1 ELSE 0 END) AS failed
-		FROM `tabQR Login Audit`
-		WHERE occurred_on BETWEEN %s AND %s{where}
-		GROUP BY DATE(occurred_on)
-		ORDER BY day
-		""",
-		tuple(args),
-		as_dict=True,
+	# Assembled by concatenation, never by interpolation: every value below is
+	# either a literal of this module or a bound parameter.
+	query = (
+		"SELECT DATE(occurred_on) AS day, "
+		"SUM(CASE WHEN event = %s AND success = 1 THEN 1 ELSE 0 END) AS successful, "
+		"SUM(CASE WHEN success = 0 AND event IN (" + placeholders + ") THEN 1 ELSE 0 END) AS failed "
+		"FROM `tabQR Login Audit` "
+		"WHERE occurred_on BETWEEN %s AND %s" + where + " "
+		"GROUP BY DATE(occurred_on) "
+		"ORDER BY day"
 	)
+
+	rows = frappe.db.sql(query, tuple(args), as_dict=True)
 	return [
 		{
 			"day": str(r["day"]),

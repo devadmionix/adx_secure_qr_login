@@ -11,7 +11,8 @@ app_license = "mit"
 # QR login depends on ERPNext User/Role/Company semantics and on the stock
 # Frappe permission engine. Declared so it cannot be installed against a bare
 # Frappe site where roles like "Sales User" do not exist.
-required_apps = ["frappe", "erpnext"]
+# `frappe` is implicitly available on every site and must not be listed here.
+required_apps = ["erpnext"]
 
 # Each item in the list will be shown as an app in the apps page
 add_to_apps_screen = [
